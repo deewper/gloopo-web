@@ -8,6 +8,7 @@ import Tokenomics from '@/components/Tokenomics';
 import Roadmap from '@/components/Roadmap';
 import BrandKit from '@/components/BrandKit';
 import Partners from '@/components/Partners';
+import WhitepaperSection from '@/components/WhitepaperSection';
 import { supabase, isSupabaseConfigured } from '@/utils/supabase';
 
 export default function Home() {
@@ -59,6 +60,7 @@ export default function Home() {
       <Tokenomics />
       <BrandKit />
       <Roadmap />
+      <WhitepaperSection />
       <Partners />
     </main>
   );

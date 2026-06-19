@@ -159,12 +159,32 @@ const AdminDashboardPage = () => {
 
   // NFTs Settings
   const [nftsMaintenanceMode, setNftsMaintenanceMode] = useState(true);
+  const [nftsCrystaraCreator, setNftsCrystaraCreator] = useState('');
+  const [nftsCrystaraCollection, setNftsCrystaraCollection] = useState('');
+  const [nftsCrystaraApiKey, setNftsCrystaraApiKey] = useState('');
+  const [nftsCrystaraNetwork, setNftsCrystaraNetwork] = useState<'mainnet' | 'testnet'>('mainnet');
+
+  // NFT Collections and Maintenance Toggles
+  const [nftsOgpassCollection, setNftsOgpassCollection] = useState('');
+  const [nftsOgpassMaintenance, setNftsOgpassMaintenance] = useState(true);
+  const [nftsOgpassCreator, setNftsOgpassCreator] = useState('');
+  const [nftsGen01Collection, setNftsGen01Collection] = useState('');
+  const [nftsGen01Maintenance, setNftsGen01Maintenance] = useState(false);
+  const [nftsGen01Creator, setNftsGen01Creator] = useState('');
+  const [nftsGen02Collection, setNftsGen02Collection] = useState('');
+  const [nftsGen02Maintenance, setNftsGen02Maintenance] = useState(true);
+  const [nftsGen02Creator, setNftsGen02Creator] = useState('');
+  const [nftsGen03Collection, setNftsGen03Collection] = useState('');
+  const [nftsGen03Maintenance, setNftsGen03Maintenance] = useState(true);
+  const [nftsGen03Creator, setNftsGen03Creator] = useState('');
 
   // General Settings
   const [genSiteName, setGenSiteName] = useState('Gloopo');
   const [genSiteTitle, setGenSiteTitle] = useState('Gloopo - Community-Driven Assets on Supra L1');
   const [genMetaDesc, setGenMetaDesc] = useState('Born natively on the Supra L1 blockchain, Gloopo is a unique entity that represents the evolution of digital exploration.');
   const [genMaintenanceMode, setGenMaintenanceMode] = useState(false);
+  const [genWhitepaperV1, setGenWhitepaperV1] = useState('https://docs.gloopo.xyz/whitepaper-v1');
+  const [genWhitepaperV2, setGenWhitepaperV2] = useState('https://docs.gloopo.xyz/whitepaper-v2');
 
   // About Settings
   const [aboutHeadline, setAboutHeadline] = useState('Who is Gloopo?');
@@ -327,6 +347,8 @@ const AdminDashboardPage = () => {
               setGenSiteTitle(val.siteTitle || 'Gloopo - Community-Driven Assets on Supra L1');
               setGenMetaDesc(val.metaDescription || 'Born natively on the Supra L1 blockchain, Gloopo is a unique entity that represents the evolution of digital exploration.');
               setGenMaintenanceMode(val.maintenanceMode || false);
+              setGenWhitepaperV1(val.whitepaperV1 || 'https://docs.gloopo.xyz/whitepaper-v1');
+              setGenWhitepaperV2(val.whitepaperV2 || 'https://docs.gloopo.xyz/whitepaper-v2');
             } else if (item.key === 'about') {
               setAboutHeadline(val.headline || 'Who is Gloopo?');
               setAboutSubheadline(val.subheadline || 'Origin Story');
@@ -385,6 +407,22 @@ const AdminDashboardPage = () => {
               setShowBrandKitMenu(val.showBrandKit !== false);
             } else if (item.key === 'nfts') {
               setNftsMaintenanceMode(val.maintenanceMode !== false);
+              setNftsCrystaraCreator(val.crystaraCreator || '');
+              setNftsCrystaraCollection(val.crystaraCollection || '');
+              setNftsCrystaraApiKey(val.crystaraApiKey || '');
+              setNftsCrystaraNetwork(val.crystaraNetwork || 'mainnet');
+              setNftsOgpassCollection(val.ogpassCollection || '');
+              setNftsOgpassMaintenance(val.ogpassMaintenance !== false);
+              setNftsOgpassCreator(val.ogpassCreator || val.crystaraCreator || '');
+              setNftsGen01Collection(val.gen01Collection || '');
+              setNftsGen01Maintenance(val.gen01Maintenance !== undefined ? val.gen01Maintenance : val.maintenanceMode !== false);
+              setNftsGen01Creator(val.gen01Creator || val.crystaraCreator || '');
+              setNftsGen02Collection(val.gen02Collection || '');
+              setNftsGen02Maintenance(val.gen02Maintenance !== false);
+              setNftsGen02Creator(val.gen02Creator || val.crystaraCreator || '');
+              setNftsGen03Collection(val.gen03Collection || '');
+              setNftsGen03Maintenance(val.gen03Maintenance !== false);
+              setNftsGen03Creator(val.gen03Creator || val.crystaraCreator || '');
             }
           });
         }
@@ -403,6 +441,8 @@ const AdminDashboardPage = () => {
             setGenSiteTitle(parsed.siteTitle || 'Gloopo - Community-Driven Assets on Supra L1');
             setGenMetaDesc(parsed.metaDescription || 'Born natively on the Supra L1 blockchain, Gloopo is a unique entity that represents the evolution of digital exploration.');
             setGenMaintenanceMode(parsed.maintenanceMode || false);
+            setGenWhitepaperV1(parsed.whitepaperV1 || 'https://docs.gloopo.xyz/whitepaper-v1');
+            setGenWhitepaperV2(parsed.whitepaperV2 || 'https://docs.gloopo.xyz/whitepaper-v2');
           } else if (k === 'about') {
             setAboutHeadline(parsed.headline || 'Who is Gloopo?');
             setAboutSubheadline(parsed.subheadline || 'Origin Story');
@@ -461,6 +501,22 @@ const AdminDashboardPage = () => {
             setShowBrandKitMenu(parsed.showBrandKit !== false);
           } else if (k === 'nfts') {
             setNftsMaintenanceMode(parsed.maintenanceMode !== false);
+            setNftsCrystaraCreator(parsed.crystaraCreator || '');
+            setNftsCrystaraCollection(parsed.crystaraCollection || '');
+            setNftsCrystaraApiKey(parsed.crystaraApiKey || '');
+            setNftsCrystaraNetwork(parsed.crystaraNetwork || 'mainnet');
+            setNftsOgpassCollection(parsed.ogpassCollection || '');
+            setNftsOgpassMaintenance(parsed.ogpassMaintenance !== false);
+            setNftsOgpassCreator(parsed.ogpassCreator || parsed.crystaraCreator || '');
+            setNftsGen01Collection(parsed.gen01Collection || '');
+            setNftsGen01Maintenance(parsed.gen01Maintenance !== undefined ? parsed.gen01Maintenance : parsed.maintenanceMode !== false);
+            setNftsGen01Creator(parsed.gen01Creator || parsed.crystaraCreator || '');
+            setNftsGen02Collection(parsed.gen02Collection || '');
+            setNftsGen02Maintenance(parsed.gen02Maintenance !== false);
+            setNftsGen02Creator(parsed.gen02Creator || parsed.crystaraCreator || '');
+            setNftsGen03Collection(parsed.gen03Collection || '');
+            setNftsGen03Maintenance(parsed.gen03Maintenance !== false);
+            setNftsGen03Creator(parsed.gen03Creator || parsed.crystaraCreator || '');
           }
         }
       });
@@ -874,6 +930,69 @@ const AdminDashboardPage = () => {
       }
     } catch (err: any) {
       console.error('File upload error:', err);
+      showToast(`Upload failed: ${err.message || 'Unknown error'}`, 'error');
+    } finally {
+      setUploadingField(null);
+    }
+  };
+
+  const handleWhitepaperUpload = async (event: React.ChangeEvent<HTMLInputElement>, version: 'v1' | 'v2') => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      showToast('Only PDF files are allowed for the whitepapers.', 'error');
+      return;
+    }
+
+    const fieldName = `whitepaper_${version}`;
+    setUploadingField(fieldName);
+
+    try {
+      if (isSupabaseConfigured && supabase) {
+        const fileExt = 'pdf';
+        const uniqueFileName = `${version}_whitepaper_${Date.now()}.${fileExt}`;
+        const filePath = uniqueFileName;
+
+        const { data, error: uploadError } = await supabase.storage
+          .from('whitepaper')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: true
+          });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('whitepaper')
+          .getPublicUrl(filePath);
+
+        if (version === 'v1') {
+          setGenWhitepaperV1(publicUrl);
+        } else {
+          setGenWhitepaperV2(publicUrl);
+        }
+
+        showToast(`Whitepaper ${version.toUpperCase()} uploaded to storage successfully!`, 'success');
+      } else {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const base64Data = e.target?.result as string;
+          if (version === 'v1') {
+            setGenWhitepaperV1(base64Data);
+          } else {
+            setGenWhitepaperV2(base64Data);
+          }
+          
+          localStorage.setItem(`gloopo_mock_file_${fieldName}`, base64Data);
+          showToast(`Whitepaper ${version.toUpperCase()} loaded successfully (mock mode).`, 'success');
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch (err: any) {
+      console.error('Whitepaper upload error:', err);
       showToast(`Upload failed: ${err.message || 'Unknown error'}`, 'error');
     } finally {
       setUploadingField(null);
@@ -2318,6 +2437,86 @@ const AdminDashboardPage = () => {
                           />
                         </div>
 
+                        <div className="cms-group">
+                          <label>Whitepaper V1 URL</label>
+                          <div style={{ display: 'flex', gap: '0.75rem', width: '100%' }}>
+                            <input 
+                              type="text" 
+                              value={genWhitepaperV1} 
+                              onChange={(e) => setGenWhitepaperV1(e.target.value)} 
+                              className="flat-input"
+                              style={{ flex: 1 }}
+                              placeholder="https://docs.gloopo.xyz/whitepaper-v1"
+                            />
+                            <label className="flat-upload-label" style={{ 
+                              background: uploadingField === 'whitepaper_v1' ? 'rgba(255,255,255,0.05)' : 'rgba(0, 255, 136, 0.08)',
+                              border: '1px dashed rgba(0, 255, 136, 0.3)',
+                              color: 'var(--primary)',
+                              padding: '0 1.5rem',
+                              borderRadius: '8px',
+                              cursor: uploadingField ? 'not-allowed' : 'pointer',
+                              fontWeight: 700,
+                              fontSize: '0.85rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.5rem',
+                              whiteSpace: 'nowrap',
+                              borderStyle: 'dashed'
+                            }}>
+                              <Upload size={16} />
+                              {uploadingField === 'whitepaper_v1' ? 'Uploading...' : 'Upload PDF'}
+                              <input 
+                                type="file" 
+                                onChange={(e) => handleWhitepaperUpload(e, 'v1')} 
+                                accept="application/pdf" 
+                                style={{ display: 'none' }}
+                                disabled={!!uploadingField}
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        <div className="cms-group">
+                          <label>Whitepaper V2 URL</label>
+                          <div style={{ display: 'flex', gap: '0.75rem', width: '100%' }}>
+                            <input 
+                              type="text" 
+                              value={genWhitepaperV2} 
+                              onChange={(e) => setGenWhitepaperV2(e.target.value)} 
+                              className="flat-input"
+                              style={{ flex: 1 }}
+                              placeholder="https://docs.gloopo.xyz/whitepaper-v2"
+                            />
+                            <label className="flat-upload-label" style={{ 
+                              background: uploadingField === 'whitepaper_v2' ? 'rgba(255,255,255,0.05)' : 'rgba(0, 255, 136, 0.08)',
+                              border: '1px dashed rgba(0, 255, 136, 0.3)',
+                              color: 'var(--primary)',
+                              padding: '0 1.5rem',
+                              borderRadius: '8px',
+                              cursor: uploadingField ? 'not-allowed' : 'pointer',
+                              fontWeight: 700,
+                              fontSize: '0.85rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.5rem',
+                              whiteSpace: 'nowrap',
+                              borderStyle: 'dashed'
+                            }}>
+                              <Upload size={16} />
+                              {uploadingField === 'whitepaper_v2' ? 'Uploading...' : 'Upload PDF'}
+                              <input 
+                                type="file" 
+                                onChange={(e) => handleWhitepaperUpload(e, 'v2')} 
+                                accept="application/pdf" 
+                                style={{ display: 'none' }}
+                                disabled={!!uploadingField}
+                              />
+                            </label>
+                          </div>
+                        </div>
+
                         <div className="cms-group border-card-toggle">
                           <div className="toggle-item-vertical">
                             <div>
@@ -2334,7 +2533,14 @@ const AdminDashboardPage = () => {
                         </div>
 
                         <button 
-                          onClick={() => handleSaveSettings('general', { siteName: genSiteName, siteTitle: genSiteTitle, metaDescription: genMetaDesc, maintenanceMode: genMaintenanceMode })}
+                          onClick={() => handleSaveSettings('general', { 
+                            siteName: genSiteName, 
+                            siteTitle: genSiteTitle, 
+                            metaDescription: genMetaDesc, 
+                            maintenanceMode: genMaintenanceMode,
+                            whitepaperV1: genWhitepaperV1,
+                            whitepaperV2: genWhitepaperV2
+                          })}
                           className="flat-save-btn btn-primary"
                           disabled={saveLoading === 'general'}
                         >
@@ -2577,8 +2783,234 @@ const AdminDashboardPage = () => {
                           </div>
                         </div>
 
+                        <div className="divider-h" style={{ margin: '1.5rem 0' }}></div>
+                        <h4 style={{ marginBottom: '1.25rem', color: 'var(--primary)', textTransform: 'uppercase', fontSize: '0.9rem', letterSpacing: '0.05em' }}>Crystara.trade Integration (Shared)</h4>
+
+                        <div className="cms-group">
+                          <label>Supra Creator Address</label>
+                          <input 
+                            type="text" 
+                            placeholder="e.g. 0x7a8d56b0..." 
+                            value={nftsCrystaraCreator} 
+                            onChange={(e) => setNftsCrystaraCreator(e.target.value)} 
+                            className="flat-input font-mono"
+                          />
+                        </div>
+
+                        <div className="cms-group">
+                          <label>Crystara API Key</label>
+                          <input 
+                            type="password" 
+                            placeholder="Enter x-api-key" 
+                            value={nftsCrystaraApiKey} 
+                            onChange={(e) => setNftsCrystaraApiKey(e.target.value)} 
+                            className="flat-input font-mono"
+                          />
+                        </div>
+
+                        <div className="cms-group" style={{ marginBottom: '2rem' }}>
+                          <label>API Network Environment</label>
+                          <select 
+                            value={nftsCrystaraNetwork} 
+                            onChange={(e) => setNftsCrystaraNetwork(e.target.value as any)} 
+                            className="flat-select"
+                          >
+                            <option value="mainnet">Mainnet (Production)</option>
+                            <option value="testnet">Testnet (Development)</option>
+                          </select>
+                        </div>
+
+                        <div className="divider-h" style={{ margin: '1.5rem 0' }}></div>
+                        <h4 style={{ marginBottom: '1.25rem', color: 'var(--primary)', textTransform: 'uppercase', fontSize: '0.9rem', letterSpacing: '0.05em' }}>Collections Setup</h4>
+
+                        {/* OG Pass Collection Setup */}
+                        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h5 style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>OG PASS</h5>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <span style={{ fontSize: '0.8rem', color: nftsOgpassMaintenance ? '#ff4d4d' : '#00ff88', fontWeight: 'bold' }}>
+                                {nftsOgpassMaintenance ? 'Maintenance' : 'Live'}
+                              </span>
+                              <button 
+                                type="button"
+                                onClick={() => setNftsOgpassMaintenance(!nftsOgpassMaintenance)}
+                                className={`toggle-btn ${nftsOgpassMaintenance ? 'active' : ''}`}
+                                style={{ padding: 0 }}
+                              >
+                                {nftsOgpassMaintenance ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', margin: 0 }}>
+                            <div className="cms-group" style={{ margin: 0 }}>
+                              <label style={{ fontSize: '0.75rem' }}>Collection Name</label>
+                              <input 
+                                type="text" 
+                                placeholder="e.g. Gloopo OG Pass" 
+                                value={nftsOgpassCollection} 
+                                onChange={(e) => setNftsOgpassCollection(e.target.value)} 
+                                className="flat-input"
+                              />
+                            </div>
+                            <div className="cms-group" style={{ margin: 0 }}>
+                              <label style={{ fontSize: '0.75rem' }}>Creator Address</label>
+                              <input 
+                                type="text" 
+                                placeholder="e.g. 0x9515..." 
+                                value={nftsOgpassCreator} 
+                                onChange={(e) => setNftsOgpassCreator(e.target.value)} 
+                                className="flat-input font-mono"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Gen 01 Collection Setup */}
+                        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h5 style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>Gen 01</h5>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <span style={{ fontSize: '0.8rem', color: nftsGen01Maintenance ? '#ff4d4d' : '#00ff88', fontWeight: 'bold' }}>
+                                {nftsGen01Maintenance ? 'Maintenance' : 'Live'}
+                              </span>
+                              <button 
+                                type="button"
+                                onClick={() => setNftsGen01Maintenance(!nftsGen01Maintenance)}
+                                className={`toggle-btn ${nftsGen01Maintenance ? 'active' : ''}`}
+                                style={{ padding: 0 }}
+                              >
+                                {nftsGen01Maintenance ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', margin: 0 }}>
+                            <div className="cms-group" style={{ margin: 0 }}>
+                              <label style={{ fontSize: '0.75rem' }}>Collection Name</label>
+                              <input 
+                                type="text" 
+                                placeholder="e.g. Gloopo" 
+                                value={nftsGen01Collection} 
+                                onChange={(e) => setNftsGen01Collection(e.target.value)} 
+                                className="flat-input"
+                              />
+                            </div>
+                            <div className="cms-group" style={{ margin: 0 }}>
+                              <label style={{ fontSize: '0.75rem' }}>Creator Address</label>
+                              <input 
+                                type="text" 
+                                placeholder="e.g. 0xdd88..." 
+                                value={nftsGen01Creator} 
+                                onChange={(e) => setNftsGen01Creator(e.target.value)} 
+                                className="flat-input font-mono"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Gen 02 Collection Setup */}
+                        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h5 style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>Gen 02</h5>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <span style={{ fontSize: '0.8rem', color: nftsGen02Maintenance ? '#ff4d4d' : '#00ff88', fontWeight: 'bold' }}>
+                                {nftsGen02Maintenance ? 'Maintenance' : 'Live'}
+                              </span>
+                              <button 
+                                type="button"
+                                onClick={() => setNftsGen02Maintenance(!nftsGen02Maintenance)}
+                                className={`toggle-btn ${nftsGen02Maintenance ? 'active' : ''}`}
+                                style={{ padding: 0 }}
+                              >
+                                {nftsGen02Maintenance ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', margin: 0 }}>
+                            <div className="cms-group" style={{ margin: 0 }}>
+                              <label style={{ fontSize: '0.75rem' }}>Collection Name</label>
+                              <input 
+                                type="text" 
+                                placeholder="e.g. Gloopo Gen 2" 
+                                value={nftsGen02Collection} 
+                                onChange={(e) => setNftsGen02Collection(e.target.value)} 
+                                className="flat-input"
+                              />
+                            </div>
+                            <div className="cms-group" style={{ margin: 0 }}>
+                              <label style={{ fontSize: '0.75rem' }}>Creator Address</label>
+                              <input 
+                                type="text" 
+                                placeholder="e.g. 0x..." 
+                                value={nftsGen02Creator} 
+                                onChange={(e) => setNftsGen02Creator(e.target.value)} 
+                                className="flat-input font-mono"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Gen 03 Collection Setup */}
+                        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '1.25rem', marginBottom: '2rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h5 style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>Gen 03</h5>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <span style={{ fontSize: '0.8rem', color: nftsGen03Maintenance ? '#ff4d4d' : '#00ff88', fontWeight: 'bold' }}>
+                                {nftsGen03Maintenance ? 'Maintenance' : 'Live'}
+                              </span>
+                              <button 
+                                type="button"
+                                onClick={() => setNftsGen03Maintenance(!nftsGen03Maintenance)}
+                                className={`toggle-btn ${nftsGen03Maintenance ? 'active' : ''}`}
+                                style={{ padding: 0 }}
+                              >
+                                {nftsGen03Maintenance ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', margin: 0 }}>
+                            <div className="cms-group" style={{ margin: 0 }}>
+                              <label style={{ fontSize: '0.75rem' }}>Collection Name</label>
+                              <input 
+                                type="text" 
+                                placeholder="e.g. Gloopo Gen 3" 
+                                value={nftsGen03Collection} 
+                                onChange={(e) => setNftsGen03Collection(e.target.value)} 
+                                className="flat-input"
+                              />
+                            </div>
+                            <div className="cms-group" style={{ margin: 0 }}>
+                              <label style={{ fontSize: '0.75rem' }}>Creator Address</label>
+                              <input 
+                                type="text" 
+                                placeholder="e.g. 0x..." 
+                                value={nftsGen03Creator} 
+                                onChange={(e) => setNftsGen03Creator(e.target.value)} 
+                                className="flat-input font-mono"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
                         <button 
-                          onClick={() => handleSaveSettings('nfts', { maintenanceMode: nftsMaintenanceMode })}
+                          onClick={() => handleSaveSettings('nfts', { 
+                            maintenanceMode: nftsMaintenanceMode,
+                            crystaraCreator: nftsCrystaraCreator,
+                            crystaraCollection: nftsGen01Collection || nftsCrystaraCollection, // Fallback for safety
+                            crystaraApiKey: nftsCrystaraApiKey,
+                            crystaraNetwork: nftsCrystaraNetwork,
+                            ogpassCollection: nftsOgpassCollection,
+                            ogpassMaintenance: nftsOgpassMaintenance,
+                            ogpassCreator: nftsOgpassCreator,
+                            gen01Collection: nftsGen01Collection,
+                            gen01Maintenance: nftsGen01Maintenance,
+                            gen01Creator: nftsGen01Creator,
+                            gen02Collection: nftsGen02Collection,
+                            gen02Maintenance: nftsGen02Maintenance,
+                            gen02Creator: nftsGen02Creator,
+                            gen03Collection: nftsGen03Collection,
+                            gen03Maintenance: nftsGen03Maintenance,
+                            gen03Creator: nftsGen03Creator
+                          })}
                           className="flat-save-btn btn-primary"
                           disabled={saveLoading === 'nfts'}
                         >
@@ -2593,7 +3025,7 @@ const AdminDashboardPage = () => {
                       </div>
 
                       <div className="cms-live-preview">
-                        <span className="preview-header">STATUS PREVIEW</span>
+                        <span className="preview-header">STATUS &amp; API PREVIEW</span>
                         <div className="preview-card-frame" style={{ background: '#07120e', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                           <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>NFTs PAGE VIEW STATUS</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -2601,6 +3033,58 @@ const AdminDashboardPage = () => {
                             <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#fff', textTransform: 'uppercase' }}>
                               {nftsMaintenanceMode ? 'Development Mode / Maintenanced' : 'Live / Publicly Accessible'}
                             </span>
+                          </div>
+
+                          <div className="divider-h" style={{ margin: '0.75rem 0' }}></div>
+                          <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>COLLECTIONS STATUS</span>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '0.35rem' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>OG Pass ({nftsOgpassCollection || 'Gloopo OG Pass'})</span>
+                                <span style={{ color: nftsOgpassMaintenance ? '#ff4d4d' : '#00ff88', fontWeight: 'bold' }}>{nftsOgpassMaintenance ? 'Coming Soon' : 'Live'}</span>
+                              </div>
+                              <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                Creator: {nftsOgpassCreator || '—'}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '0.35rem' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>Gen 01 ({nftsGen01Collection || nftsCrystaraCollection || 'Gloopo'})</span>
+                                <span style={{ color: nftsGen01Maintenance ? '#ff4d4d' : '#00ff88', fontWeight: 'bold' }}>{nftsGen01Maintenance ? 'Coming Soon' : 'Live'}</span>
+                              </div>
+                              <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                Creator: {nftsGen01Creator || nftsCrystaraCreator || '—'}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '0.35rem' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>Gen 02 ({nftsGen02Collection || '—'})</span>
+                                <span style={{ color: nftsGen02Maintenance ? '#ff4d4d' : '#00ff88', fontWeight: 'bold' }}>{nftsGen02Maintenance ? 'Coming Soon' : 'Live'}</span>
+                              </div>
+                              <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                Creator: {nftsGen02Creator || '—'}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>Gen 03 ({nftsGen03Collection || '—'})</span>
+                                <span style={{ color: nftsGen03Maintenance ? '#ff4d4d' : '#00ff88', fontWeight: 'bold' }}>{nftsGen03Maintenance ? 'Coming Soon' : 'Live'}</span>
+                              </div>
+                              <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                Creator: {nftsGen03Creator || '—'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="divider-h" style={{ margin: '0.75rem 0' }}></div>
+                          <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--text-muted)' }}>CRYSTARA API ENDPOINT (GEN 01 EXAMPLE)</span>
+                          <div style={{ fontSize: '0.75rem', color: '#fff', wordBreak: 'break-all', fontFamily: 'monospace', background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(0,255,136,0.1)' }}>
+                            {nftsCrystaraCreator && (nftsGen01Collection || nftsCrystaraCollection) ? (
+                              `https://api.crystara.trade/${nftsCrystaraNetwork}/tokens-by-collection?creator=${nftsCrystaraCreator.substring(0, 8)}...&collection=${nftsGen01Collection || nftsCrystaraCollection}`
+                            ) : (
+                              <span style={{ color: '#ffbb00', fontStyle: 'italic' }}>API endpoint not fully configured</span>
+                            )}
                           </div>
                         </div>
                       </div>

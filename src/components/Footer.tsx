@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '@/utils/supabase';
+import { X, FileText, Download } from 'lucide-react';
 
 // Custom official brand icons for Gloopo (X, Telegram, Discord) styled to match color schemes
 const XIcon = ({ size = 20 }: { size?: number }) => (
@@ -44,6 +45,10 @@ const Footer = () => {
   const [telegram, setTelegram] = useState('https://t.me/gloopo');
   const [discord, setDiscord] = useState('https://discord.gg/gloopo');
   const [tagline, setTagline] = useState('Born natively on the Supra L1 blockchain, Gloopo is a unique entity that represents the evolution of digital exploration.');
+  
+  const [isWhitepaperOpen, setIsWhitepaperOpen] = useState(false);
+  const [whitepaperV1, setWhitepaperV1] = useState('https://docs.gloopo.xyz/whitepaper-v1');
+  const [whitepaperV2, setWhitepaperV2] = useState('https://docs.gloopo.xyz/whitepaper-v2');
 
   useEffect(() => {
     const loadFooterSettings = async () => {
@@ -66,6 +71,8 @@ const Footer = () => {
             .single();
           if (genData && genData.value) {
             setTagline(genData.value.metaDescription || 'Born natively on the Supra L1 blockchain, Gloopo is a unique entity.');
+            setWhitepaperV1(genData.value.whitepaperV1 || 'https://docs.gloopo.xyz/whitepaper-v1');
+            setWhitepaperV2(genData.value.whitepaperV2 || 'https://docs.gloopo.xyz/whitepaper-v2');
           }
         } catch (err) {
           console.error('Failed to load dynamic Footer settings:', err);
@@ -85,12 +92,25 @@ const Footer = () => {
           try {
             const parsed = JSON.parse(genVal);
             setTagline(parsed.metaDescription || tagline);
+            setWhitepaperV1(parsed.whitepaperV1 || 'https://docs.gloopo.xyz/whitepaper-v1');
+            setWhitepaperV2(parsed.whitepaperV2 || 'https://docs.gloopo.xyz/whitepaper-v2');
           } catch (e) { }
         }
       }
     };
     loadFooterSettings();
   }, []);
+
+  const getDownloadUrl = (url: string) => {
+    if (!url) return '#';
+    // For local base64/mock files, return directly
+    if (url.startsWith('data:')) return url;
+    // For supabase storage url, append download query param to force download header
+    if (url.includes('supabase.co') && url.includes('/storage/v1/object/public/')) {
+      return url.includes('?') ? `${url}&download=` : `${url}?download=`;
+    }
+    return url;
+  };
 
   return (
     <footer className="footer">
@@ -115,12 +135,20 @@ const Footer = () => {
             <div className="link-group">
               <h4>Ecosystem</h4>
               <a href="https://app.atmos.ag/en/token-studio/0xa101dd55fd41075dc42084dd00b956233dbf5b30c97bca0cb8ea0cd2e9543a82" target="_blank">Atmos</a>
-              <a href="#">Crystara</a>
+              <a href="https://crystara.trade/" target="_blank">Crystara</a>
             </div>
 
             <div className="link-group">
               <h4>About</h4>
-              <a href="#">Whitepaper</a>
+              <a 
+                href="#whitepaper" 
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  setIsWhitepaperOpen(true); 
+                }}
+              >
+                Whitepaper
+              </a>
               <a href="#brand-kit">Brand Kit</a>
             </div>
           </div>
@@ -129,6 +157,68 @@ const Footer = () => {
           <p>&copy; 2026 Gloopo. All rights reserved.</p>
         </div>
       </div>
+
+      {/* Whitepaper Selection Modal */}
+      {isWhitepaperOpen && (
+        <div className="modal-overlay" onClick={() => setIsWhitepaperOpen(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Select Whitepaper Version</h2>
+              <button className="close-btn" onClick={() => setIsWhitepaperOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="modal-options">
+              <div className="option-card">
+                <div className="icon-box">
+                  <FileText size={22} className="icon-green" />
+                </div>
+                <div className="option-info">
+                  <h3>Whitepaper V1</h3>
+                </div>
+                <div className="action-buttons">
+                  <a 
+                    href={getDownloadUrl(whitepaperV1)} 
+                    download="Gloopo_Whitepaper_V1.pdf"
+                    className="action-btn download-btn"
+                    title="Download PDF"
+                    onClick={() => setIsWhitepaperOpen(false)}
+                  >
+                    <Download size={15} />
+                    <span>Download</span>
+                  </a>
+                </div>
+              </div>
+
+              <div className="option-card">
+                <div className="icon-box">
+                  <FileText size={22} className="icon-green" />
+                </div>
+                <div className="option-info">
+                  <h3>Whitepaper V2</h3>
+                </div>
+                <div className="action-buttons">
+                  <a 
+                    href={getDownloadUrl(whitepaperV2)} 
+                    download="Gloopo_Whitepaper_V2.pdf"
+                    className="action-btn download-btn"
+                    title="Download PDF"
+                    onClick={() => setIsWhitepaperOpen(false)}
+                  >
+                    <Download size={15} />
+                    <span>Download</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <p>Explore the architecture driving the Gloopo ecosystem.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .footer {
@@ -179,6 +269,227 @@ const Footer = () => {
           color: var(--text-muted);
           font-size: 0.85rem;
           font-weight: 600;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.85);
+          backdrop-filter: blur(10px);
+          z-index: 2000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1rem;
+          animation: fadeIn 0.3s ease;
+        }
+
+        .modal-card {
+          width: 100%;
+          max-width: 480px;
+          background: #040c0a;
+          border: 1px solid rgba(0, 255, 136, 0.2);
+          border-radius: 16px;
+          overflow: hidden;
+          box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9), 0 0 40px rgba(0, 255, 136, 0.05);
+          animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-header {
+          padding: 1.5rem;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .modal-header h2 {
+          font-size: 1.25rem;
+          color: #fff;
+          font-weight: 700;
+          letter-spacing: 0.02em;
+          margin: 0;
+        }
+
+        .close-btn {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: rgba(0, 255, 136, 0.1);
+          color: var(--primary);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+          border: 1px solid rgba(0, 255, 136, 0.2);
+          cursor: pointer;
+        }
+
+        .close-btn:hover {
+          background: var(--primary);
+          color: #000;
+          transform: rotate(90deg);
+        }
+
+        .modal-options {
+          padding: 1.5rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
+        .option-card {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1.25rem;
+          padding: 0.85rem 1.25rem;
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 12px;
+          cursor: default;
+          transition: all 0.3s ease;
+        }
+
+        .option-card:hover {
+          background: rgba(0, 255, 136, 0.05);
+          border-color: rgba(0, 255, 136, 0.3);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 20px rgba(0, 255, 136, 0.05);
+        }
+
+        .icon-box {
+          width: 42px;
+          height: 42px;
+          border-radius: 8px;
+          background: rgba(0, 255, 136, 0.1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          border: 1px solid rgba(0, 255, 136, 0.2);
+          transition: all 0.3s ease;
+        }
+
+        .option-card:hover .icon-box {
+          background: var(--primary);
+        }
+
+        .option-card:hover .icon-box :global(svg) {
+          color: #000 !important;
+        }
+
+        :global(.icon-green) {
+          color: var(--primary) !important;
+        }
+
+        .option-info {
+          flex: 1;
+          text-align: left;
+        }
+
+        .option-info h3 {
+          font-size: 1.05rem;
+          color: #fff;
+          margin: 0;
+          font-weight: 700;
+          transition: color 0.3s ease;
+        }
+
+        .option-card:hover .option-info h3 {
+          color: var(--primary);
+        }
+
+        .option-info p {
+          font-size: 0.85rem;
+          color: var(--text-muted);
+          margin: 0;
+          line-height: 1.4;
+          font-weight: 500;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 0.5rem;
+          align-items: center;
+        }
+
+        .action-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.5rem 1rem;
+          border-radius: 8px;
+          font-weight: 700;
+          font-size: 0.85rem;
+          text-decoration: none;
+          transition: all 0.2s ease;
+          border: 1px solid transparent;
+          cursor: pointer;
+        }
+
+        .view-btn {
+          background: rgba(255, 255, 255, 0.03);
+          border-color: rgba(255, 255, 255, 0.08);
+          color: #fff;
+        }
+
+        .view-btn:hover {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(255, 255, 255, 0.15);
+          color: var(--primary);
+        }
+
+        .download-btn {
+          background: rgba(0, 255, 136, 0.08);
+          border-color: rgba(0, 255, 136, 0.2);
+          color: var(--primary);
+        }
+
+        .download-btn:hover {
+          background: var(--primary);
+          border-color: var(--primary);
+          color: #000;
+          box-shadow: 0 4px 15px rgba(0, 255, 136, 0.2);
+        }
+
+        .modal-footer {
+          padding: 1rem 1.5rem 1.5rem;
+          text-align: center;
+          border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .modal-footer p {
+          font-size: 0.8rem;
+          color: var(--text-muted);
+          margin: 0;
+          font-weight: 500;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+
+        @media (max-width: 576px) {
+          .option-card {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+          }
+          .action-buttons {
+            width: 100%;
+            justify-content: flex-end;
+          }
         }
 
         @media (max-width: 992px) {
