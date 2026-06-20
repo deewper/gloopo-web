@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Script from 'next/script';
 import ConditionalNavbar from '@/components/ConditionalNavbar';
 import ConditionalFooter from '@/components/ConditionalFooter';
 import ScrollToTop from '@/components/ScrollToTop';
 import MaintenanceWrapper from '@/components/MaintenanceWrapper';
 import ClientOpeningLoader from '@/components/ClientOpeningLoader';
+import { WalletProvider } from "@/context/WalletContext";
 
 export const metadata: Metadata = {
   title: "Gloopo - Community-Driven Assets on Supra L1",
@@ -16,24 +18,29 @@ export const metadata: Metadata = {
   },
 };
 
-import { WalletProvider } from "@/context/WalletContext";
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <head>
-        {/*
-          Inline blocking script — runs synchronously before first paint.
-          Adds `gloopo-loading` class to <html> on non-admin pages so that
-          globals.css immediately hides body content until the loader finishes.
-        */}
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{if(!window.location.pathname.startsWith('/admin')){document.documentElement.classList.add('gloopo-loading');}}catch(e){}})();` }} />
-      </head>
+    // suppressHydrationWarning: the inline script below mutates <html> class
+    // before React hydrates, which is intentional and safe to suppress.
+    <html lang="en" suppressHydrationWarning>
       <body>
+        {/*
+          Runs synchronously before any page code (beforeInteractive).
+          Adds `gloopo-loading` to <html> on non-admin pages so that
+          globals.css hides body content until the loader finishes —
+          eliminating the flash of page content on refresh.
+        */}
+        <Script
+          id="gloopo-loader-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(!window.location.pathname.startsWith('/admin')){document.documentElement.classList.add('gloopo-loading');}}catch(e){}})();`
+          }}
+        />
         <ClientOpeningLoader />
         <WalletProvider>
           <MaintenanceWrapper>
@@ -47,4 +54,3 @@ export default function RootLayout({
     </html>
   );
 }
-
