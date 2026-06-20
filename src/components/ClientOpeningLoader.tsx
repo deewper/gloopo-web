@@ -12,6 +12,8 @@ export default function ClientOpeningLoader() {
   useEffect(() => {
     // Skip entirely on any /admin route
     if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+      // Remove blocking class if somehow set (edge case)
+      document.documentElement.classList.remove('gloopo-loading');
       return;
     }
     // Show on every hard refresh / first load — no sessionStorage guard
@@ -19,10 +21,17 @@ export default function ClientOpeningLoader() {
   }, []);
 
   const handleFinish = useCallback(() => {
+    // Remove the blocking class → triggers smooth CSS reveal of page content
+    document.documentElement.classList.remove('gloopo-loading');
     setShow(false);
   }, []);
 
   if (!show) return null;
-  return <OpeningLoader onFinish={handleFinish} />;
+
+  return (
+    <div id="__gloopo_loader">
+      <OpeningLoader onFinish={handleFinish} />
+    </div>
+  );
 }
 

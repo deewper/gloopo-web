@@ -25,6 +25,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/*
+          Inline blocking script — runs synchronously before first paint.
+          Adds `gloopo-loading` class to <html> on non-admin pages so that
+          globals.css immediately hides body content until the loader finishes.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{if(!window.location.pathname.startsWith('/admin')){document.documentElement.classList.add('gloopo-loading');}}catch(e){}})();` }} />
+      </head>
       <body>
         <ClientOpeningLoader />
         <WalletProvider>

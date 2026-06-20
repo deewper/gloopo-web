@@ -34,6 +34,21 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ── Opening loader: block flash of page content ────────────────────────── */
+/* Applied instantly by an inline <script> in <head> before React hydrates  */
+html.gloopo-loading body > *:not(#__gloopo_loader) {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: none !important;
+}
+/* Smooth reveal when class is removed */
+html:not(.gloopo-loading) body > * {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.35s ease !important;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 700;
