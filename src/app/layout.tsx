@@ -4,6 +4,7 @@ import ConditionalNavbar from '@/components/ConditionalNavbar';
 import ConditionalFooter from '@/components/ConditionalFooter';
 import ScrollToTop from '@/components/ScrollToTop';
 import MaintenanceWrapper from '@/components/MaintenanceWrapper';
+import ClientOpeningLoader from '@/components/ClientOpeningLoader';
 
 export const metadata: Metadata = {
   title: "Gloopo - Community-Driven Assets on Supra L1",
@@ -25,6 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <ClientOpeningLoader />
         <WalletProvider>
           <MaintenanceWrapper>
             <ConditionalNavbar />
@@ -37,3 +39,4 @@ export default function RootLayout({
     </html>
   );
 }
+
