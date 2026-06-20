@@ -43,6 +43,9 @@ next-env.d.ts
 # scratch
 /scratch
 
+# migration
+/migration
+
 # archives
 *.zip
 

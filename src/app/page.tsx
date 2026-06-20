@@ -52,6 +52,74 @@ export default function Home() {
     loadGeneralSettings();
   }, []);
 
+  // Visitor Traffic Tracking
+  useEffect(() => {
+    const trackVisitor = async () => {
+      const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const lastVisitDate = localStorage.getItem('gloopo_visited_today');
+      const isUnique = lastVisitDate !== todayStr;
+      
+      if (isUnique) {
+        localStorage.setItem('gloopo_visited_today', todayStr);
+      }
+
+      if (isSupabaseConfigured && supabase) {
+        try {
+          await supabase.rpc('track_visit', { is_unique: isUnique });
+        } catch (err) {
+          console.error('Failed to log visitor traffic to Supabase:', err);
+        }
+      } else {
+        // Mock Mode LocalStorage Tracker
+        try {
+          const stored = localStorage.getItem('gloopo_mock_traffic_stats');
+          let stats: any[] = stored ? JSON.parse(stored) : [];
+          
+          // If empty, generate simulated history for the last 7 days (to make the chart look nice)
+          if (stats.length === 0) {
+            const today = new Date();
+            for (let i = 6; i >= 0; i--) {
+              const d = new Date();
+              d.setDate(today.getDate() - i);
+              const dStr = d.toISOString().split('T')[0];
+              // Random realistic views/visitors
+              stats.push({
+                date: dStr,
+                page_views: Math.floor(Math.random() * 80) + 100,
+                unique_visitors: Math.floor(Math.random() * 30) + 40
+              });
+            }
+          }
+          
+          // Increment today's stats
+          const todayEntryIndex = stats.findIndex(s => s.date === todayStr);
+          if (todayEntryIndex !== -1) {
+            stats[todayEntryIndex].page_views += 1;
+            if (isUnique) {
+              stats[todayEntryIndex].unique_visitors += 1;
+            }
+          } else {
+            // New day
+            stats.push({
+              date: todayStr,
+              page_views: 1,
+              unique_visitors: isUnique ? 1 : 0
+            });
+            // Keep only last 10 days of mock stats
+            if (stats.length > 10) {
+              stats.shift();
+            }
+          }
+          
+          localStorage.setItem('gloopo_mock_traffic_stats', JSON.stringify(stats));
+        } catch (err) {
+          console.error('Failed to update mock traffic stats:', err);
+        }
+      }
+    };
+    trackVisitor();
+  }, []);
+
   return (
     <main>
       <Hero />

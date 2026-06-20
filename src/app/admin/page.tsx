@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, isSupabaseConfigured } from '@/utils/supabase';
 import { 
@@ -9,6 +9,7 @@ import {
   Database, 
   AlertTriangle, 
   Users, 
+  User, 
   Activity, 
   DollarSign, 
   Settings, 
@@ -22,6 +23,8 @@ import {
   Cpu,
   LayoutDashboard,
   ChevronRight,
+  ChevronLeft,
+  ChevronDown,
   Sliders,
   Globe,
   Trash2,
@@ -37,7 +40,8 @@ import {
   RefreshCcw,
   GraduationCap,
   Terminal,
-  Lock
+  Lock,
+  Eye
 } from 'lucide-react';
 
 const techIconMap: { [key: string]: React.ComponentType<any> } = {
@@ -53,14 +57,100 @@ const techIconMap: { [key: string]: React.ComponentType<any> } = {
   Settings
 };
 
-// Simulated Mock Data for the Dashboard when Supabase is in Mock Mode
-const INITIAL_MOCK_TRANSACTIONS = [
-  { id: 'tx_01', wallet: 'sps1a9...e3x9', type: 'SUPRA → GLOOPO', amount: '1,250 SUPRA', value: '$85.00', time: '2 mins ago', status: 'completed' },
-  { id: 'tx_02', wallet: 'sps1q5...9w4z', type: 'GLOOPO → SUPRA', amount: '5,000 GLOOPO', value: '$340.00', time: '14 mins ago', status: 'completed' },
-  { id: 'tx_03', wallet: 'sps1c7...2h8p', type: 'SUPRA → GLOOPO', amount: '800 SUPRA', value: '$54.40', time: '1 hour ago', status: 'completed' },
-  { id: 'tx_04', wallet: 'sps1m2...7k4v', type: 'Mint NFT Gen 1', amount: '150 SUPRA', value: '$10.20', time: '3 hours ago', status: 'completed' },
-  { id: 'tx_05', wallet: 'sps1u8...5s2q', type: 'SUPRA → GLOOPO', amount: '10,000 GLOOPO', value: '$680.00', time: '5 hours ago', status: 'failed' }
+const TECH_ICON_OPTIONS = [
+  { value: 'Zap', label: 'Zap (Lightning)' },
+  { value: 'RefreshCcw', label: 'RefreshCcw (Circular)' },
+  { value: 'GraduationCap', label: 'Graduation (Cap)' },
+  { value: 'Cpu', label: 'Cpu (Processor)' },
+  { value: 'Shield', label: 'Shield (Security)' },
+  { value: 'Activity', label: 'Activity (Pulse)' },
+  { value: 'Globe', label: 'Globe (Network)' },
+  { value: 'Terminal', label: 'Terminal (Developer)' },
+  { value: 'Lock', label: 'Lock (Secure)' },
+  { value: 'Settings', label: 'Settings (Control)' }
 ];
+
+const ASSET_FORMAT_OPTIONS = [
+  { value: 'High-Res PNG', label: 'High-Res PNG' },
+  { value: 'Transparent PNG', label: 'Transparent PNG' },
+  { value: 'Isolated PNG', label: 'Isolated PNG' },
+  { value: 'Wallpapers PNG', label: 'Wallpapers PNG' },
+  { value: 'Vector GIF', label: 'Vector GIF' },
+  { value: 'Futuristic JPG', label: 'Futuristic JPG' },
+  { value: 'Vector SVG', label: 'Vector SVG' }
+];
+
+const ROADMAP_STATUS_OPTIONS = [
+  { value: 'completed', label: 'Completed' },
+  { value: 'active', label: 'Active' },
+  { value: 'pending', label: 'Pending' }
+];
+
+const CRYSTARA_NETWORK_OPTIONS = [
+  { value: 'mainnet', label: 'Mainnet (Production)' },
+  { value: 'testnet', label: 'Testnet (Development)' }
+];
+
+interface CustomDropdownProps {
+  value: string;
+  onChange: (val: string) => void;
+  options: { value: string; label: string }[];
+  style?: React.CSSProperties;
+}
+
+const CustomDropdown: React.FC<CustomDropdownProps> = ({ value, onChange, options, style }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const selectedOption = options.find((opt) => opt.value === value) || options[0];
+
+  return (
+    <div ref={dropdownRef} className="custom-select-wrapper" style={style}>
+      <div 
+        className={`custom-select-trigger ${isOpen ? 'open' : ''}`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className="selected-text">{selectedOption ? selectedOption.label : value}</span>
+        <ChevronDown size={16} className={`arrow-icon ${isOpen ? 'open' : ''}`} />
+      </div>
+
+      {isOpen && (
+        <div className="custom-select-options-list">
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <div
+                key={opt.value}
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`custom-select-option-item ${isSelected ? 'selected' : ''}`}
+              >
+                <span>{opt.label}</span>
+                {isSelected && <Check size={14} className="check-icon" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Simulated Mock Data for the Dashboard when Supabase is in Mock Mode
 
 const INITIAL_MOCK_WHITELIST = [
   { address: 'sps1a9px...fe3x9w812', name: 'Gloopo Core Dev', addedAt: '2026-05-10', tier: 'Vanguard' },
@@ -129,10 +219,24 @@ const AdminDashboardPage = () => {
   const router = useRouter();
   const [adminEmail, setAdminEmail] = useState('');
   const [loading, setLoading] = useState(true);
-  const [currentTab, setCurrentTab] = useState<'overview' | 'contracts' | 'whitelist' | 'supabase' | 'settings'>('overview');
+  const [currentTab, setCurrentTab] = useState<'overview' | 'supabase' | 'settings' | 'logs' | 'profile'>('overview');
+
+  // Console Overview Stats
+  const [activeAdminsCount, setActiveAdminsCount] = useState(1);
+  const [todayPageViews, setTodayPageViews] = useState(0);
+  const [todayUniqueVisitors, setTodayUniqueVisitors] = useState(0);
+  const [totalPageViews, setTotalPageViews] = useState(0);
+  const [totalUniqueVisitors, setTotalUniqueVisitors] = useState(0);
+  const [trafficHistory, setTrafficHistory] = useState<any[]>([]);
+  
+  // Logs System States
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [showClearLogsModal, setShowClearLogsModal] = useState(false);
+  const [logsPage, setLogsPage] = useState(1);
+  const LOGS_PER_PAGE = 25;
   
   // Dashboard & Whitelist States
-  const [transactions, setTransactions] = useState(INITIAL_MOCK_TRANSACTIONS);
   const [whitelist, setWhitelist] = useState(INITIAL_MOCK_WHITELIST);
   const [isMintingActive, setIsMintingActive] = useState(true);
   const [isSwapPaused, setIsSwapPaused] = useState(false);
@@ -143,7 +247,7 @@ const AdminDashboardPage = () => {
   const [newWhitelistTier, setNewWhitelistTier] = useState('Alpha Tester');
 
   // --- CMS WEBSITE SETTINGS STATES ---
-  const [settingsSubTab, setSettingsSubTab] = useState<'general' | 'about' | 'tokenomics' | 'socials' | 'brandkit' | 'roadmap' | 'buttons' | 'nfts' | 'partners'>('about');
+  const [settingsSubTab, setSettingsSubTab] = useState<'general' | 'about' | 'tokenomics' | 'socials' | 'brandkit' | 'roadmap' | 'buttons' | 'nfts' | 'partners' | 'security'>('about');
   const [saveLoading, setSaveLoading] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
@@ -279,6 +383,314 @@ const AdminDashboardPage = () => {
   const [newSlicePct, setNewSlicePct] = useState(0);
   const [newSliceColor, setNewSliceColor] = useState('#00ff88');
 
+  // MFA Security System States
+  const [loadingMfa, setLoadingMfa] = useState(false);
+  const [mfaActive, setMfaActive] = useState(false);
+  const [mfaSecret, setMfaSecret] = useState('');
+  const [mfaQrCode, setMfaQrCode] = useState('');
+  const [mfaVerifyCode, setMfaVerifyCode] = useState('');
+  const [mfaStep, setMfaStep] = useState<'none' | 'enroll' | 'disable'>('none');
+  const [mfaFactorId, setMfaFactorId] = useState('');
+
+  // Check MFA Status function
+  const checkMfaStatus = async () => {
+    if (isSupabaseConfigured && supabase) {
+      setLoadingMfa(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('No active user session');
+
+        // Fetch DB status
+        const { data: profile, error: profileError } = await supabase
+          .from('admin_profiles')
+          .select('mfa_enabled')
+          .eq('id', user.id)
+          .single();
+        if (profileError) throw profileError;
+
+        // Fetch Supabase Auth status
+        const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
+        if (factorsError) throw factorsError;
+        
+        const activeTotp = factorsData?.all?.find(f => f.status === 'verified' && f.factor_type === 'totp');
+        
+        // MFA is active only if it is verified in Supabase Auth AND enabled in database profile
+        if (activeTotp && profile?.mfa_enabled) {
+          setMfaActive(true);
+          setMfaFactorId(activeTotp.id);
+        } else {
+          setMfaActive(false);
+          setMfaFactorId(activeTotp ? activeTotp.id : '');
+        }
+      } catch (err) {
+        console.error('Failed to check MFA status:', err);
+      } finally {
+        setLoadingMfa(false);
+      }
+    }
+  };
+
+  // Check status when the profile settings tab is loaded
+  useEffect(() => {
+    if (currentTab === 'profile') {
+      checkMfaStatus();
+    }
+  }, [currentTab]);
+
+  // MFA Handlers
+  const handleEnableMfa = async () => {
+    if (isSupabaseConfigured && supabase) {
+      setMfaStep('enroll');
+      setMfaVerifyCode('');
+      try {
+        // List existing factors first
+        const { data: factorsData, error: listError } = await supabase.auth.mfa.listFactors();
+        if (listError) throw listError;
+        
+        // Unenroll only unverified factors since unenrolling verified factors requires aal2 session
+        const unverifiedFactors = factorsData?.all?.filter(f => f.status === 'unverified') || [];
+        for (const factor of unverifiedFactors) {
+          await supabase.auth.mfa.unenroll({ factorId: factor.id });
+        }
+
+        const { data, error } = await supabase.auth.mfa.enroll({
+          factorType: 'totp',
+          issuer: 'Gloopo L1',
+          friendlyName: adminEmail
+        });
+        if (error) throw error;
+        
+        setMfaFactorId(data.id);
+        setMfaSecret(data.totp.secret || '');
+        setMfaQrCode(data.totp.qr_code || '');
+      } catch (err: any) {
+        showToast(`Failed to enroll MFA: ${err.message}`, 'error');
+        setMfaStep('none');
+      }
+    }
+  };
+
+  const handleVerifyMfa = async () => {
+    if (isSupabaseConfigured && supabase && mfaFactorId) {
+      try {
+        const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+          factorId: mfaFactorId
+        });
+        if (challengeError) throw challengeError;
+        
+        const { error: verifyError } = await supabase.auth.mfa.verify({
+          factorId: mfaFactorId,
+          challengeId: challengeData.id,
+          code: mfaVerifyCode
+        });
+        if (verifyError) throw verifyError;
+
+        // Update database profile
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { error: dbError } = await supabase
+            .from('admin_profiles')
+            .update({ mfa_enabled: true })
+            .eq('id', user.id);
+          if (dbError) throw dbError;
+        }
+        
+        showToast('Google Authenticator MFA successfully enabled!', 'success');
+        setMfaStep('none');
+        await logAdminAction('enable_mfa', `Enabled MFA Google Authenticator security`);
+        await checkMfaStatus();
+      } catch (err: any) {
+        showToast(`Verification failed: ${err.message}`, 'error');
+      }
+    }
+  };
+
+  const handleDisableMfa = () => {
+    setMfaStep('disable');
+    setMfaVerifyCode('');
+  };
+
+  const handleVerifyDisableMfa = async () => {
+    if (isSupabaseConfigured && supabase && mfaFactorId) {
+      if (!mfaVerifyCode) {
+        showToast('Please enter the verification code.', 'error');
+        return;
+      }
+      try {
+        // Step 1: Challenge the factor
+        const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+          factorId: mfaFactorId
+        });
+        if (challengeError) throw challengeError;
+        
+        // Step 2: Verify the challenge
+        const { error: verifyError } = await supabase.auth.mfa.verify({
+          factorId: mfaFactorId,
+          challengeId: challengeData.id,
+          code: mfaVerifyCode
+        });
+        if (verifyError) throw verifyError;
+        
+        // Step 3: Unenroll (Disable) the factor since verification was successful
+        const { error: unenrollError } = await supabase.auth.mfa.unenroll({
+          factorId: mfaFactorId
+        });
+        if (unenrollError) throw unenrollError;
+
+        // Step 4: Update database profile
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { error: dbError } = await supabase
+            .from('admin_profiles')
+            .update({ mfa_enabled: false })
+            .eq('id', user.id);
+          if (dbError) throw dbError;
+        }
+        
+        showToast('MFA has been successfully disabled.', 'warning');
+        setMfaStep('none');
+        setMfaVerifyCode('');
+        await logAdminAction('disable_mfa', `Disabled MFA Google Authenticator security`);
+        await checkMfaStatus();
+      } catch (err: any) {
+        showToast(`Verification failed: ${err.message}`, 'error');
+      }
+    }
+  };
+
+  // Logs Action Helper
+  const logAdminAction = async (action: string, details: string) => {
+    const timestamp = new Date().toISOString();
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { error } = await supabase
+          .from('admin_logs')
+          .insert({
+            admin_email: adminEmail,
+            action,
+            details
+          });
+        if (error) console.error('Failed to log admin action to Supabase:', error);
+      } catch (err) {
+        console.error('Failed to log admin action:', err);
+      }
+    } else {
+      // Mock mode
+      const stored = localStorage.getItem('gloopo_mock_logs');
+      const currentLogs = stored ? JSON.parse(stored) : [];
+      const newLog = {
+        id: Date.now(),
+        admin_email: adminEmail || 'mock-admin@gloopo.com',
+        action,
+        details,
+        created_at: timestamp
+      };
+      const updatedLogs = [newLog, ...currentLogs];
+      localStorage.setItem('gloopo_mock_logs', JSON.stringify(updatedLogs));
+      if (currentTab === 'logs') {
+        setLogs(updatedLogs);
+      }
+    }
+  };
+
+  // Fetch Logs Helper
+  const fetchLogs = async () => {
+    if (isSupabaseConfigured && supabase) {
+      setLoadingLogs(true);
+      try {
+        const { data, error } = await supabase
+          .from('admin_logs')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        setLogs(data || []);
+      } catch (err: any) {
+        console.error('Failed to fetch logs:', err);
+      } finally {
+        setLoadingLogs(false);
+      }
+    } else {
+      const stored = localStorage.getItem('gloopo_mock_logs');
+      if (stored) {
+        setLogs(JSON.parse(stored));
+      } else {
+        setLogs([]);
+      }
+    }
+  };
+
+  // Clear Logs Helper
+  const handleClearLogs = () => {
+    setShowClearLogsModal(true);
+  };
+
+  const executeClearLogs = async () => {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { error } = await supabase
+          .from('admin_logs')
+          .delete()
+          .neq('id', 0);
+        if (error) throw error;
+        showToast('All logs cleared successfully!', 'success');
+        setLogs([]);
+      } catch (err: any) {
+        showToast(`Failed to clear logs: ${err.message}`, 'error');
+      }
+    } else {
+      localStorage.removeItem('gloopo_mock_logs');
+      setLogs([]);
+      showToast('All logs cleared successfully (mock mode)!', 'success');
+    }
+  };
+
+  // Delete Single Log Helper
+  const handleDeleteSingleLog = async (logId: number) => {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { error } = await supabase
+          .from('admin_logs')
+          .delete()
+          .eq('id', logId);
+        if (error) throw error;
+        showToast('Log entry deleted.', 'success');
+      } catch (err: any) {
+        showToast(`Failed to delete log: ${err.message}`, 'error');
+      }
+    } else {
+      const stored = localStorage.getItem('gloopo_mock_logs');
+      if (stored) {
+        const currentLogs = JSON.parse(stored);
+        const updated = currentLogs.filter((l: any) => l.id !== logId);
+        localStorage.setItem('gloopo_mock_logs', JSON.stringify(updated));
+        setLogs(updated);
+        showToast('Log entry deleted.', 'success');
+      }
+    }
+  };
+
+  // Realtime logs sync hook
+  useEffect(() => {
+    if (currentTab === 'logs') {
+      fetchLogs();
+      if (isSupabaseConfigured && supabase) {
+        const channel = supabase
+          .channel('admin-logs-realtime')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'admin_logs' },
+            () => {
+              fetchLogs();
+            }
+          )
+          .subscribe();
+        return () => {
+          supabase?.removeChannel(channel);
+        };
+      }
+    }
+  }, [currentTab]);
+
   // Authentication guard and initial data loading
   useEffect(() => {
     const authenticateAndLoad = async () => {
@@ -286,11 +698,11 @@ const AdminDashboardPage = () => {
 
       // Restore last opened tab & settings sub-tab from localStorage
       const savedTab = localStorage.getItem('admin_current_tab');
-      if (savedTab && ['overview', 'contracts', 'whitelist', 'supabase', 'settings'].includes(savedTab)) {
+      if (savedTab && ['overview', 'supabase', 'settings', 'logs', 'profile'].includes(savedTab)) {
         setCurrentTab(savedTab as any);
       }
       const savedSubTab = localStorage.getItem('admin_settings_sub_tab');
-      if (savedSubTab && ['general', 'about', 'tokenomics', 'socials', 'brandkit', 'roadmap', 'buttons', 'nfts', 'partners'].includes(savedSubTab)) {
+      if (savedSubTab && ['general', 'about', 'tokenomics', 'socials', 'brandkit', 'roadmap', 'buttons', 'nfts', 'partners', 'security'].includes(savedSubTab)) {
         setSettingsSubTab(savedSubTab as any);
       }
       
@@ -300,9 +712,23 @@ const AdminDashboardPage = () => {
         if (!session) {
           router.push('/admin/login');
           return;
-        } else {
-          setAdminEmail(session.user.email || 'Supabase Admin');
         }
+
+        // Retrieve admin profile to verify privileges
+        const { data: profile, error: profileError } = await supabase
+          .from('admin_profiles')
+          .select('role, status')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError || !profile || profile.role !== 'admin' || profile.status !== 'active') {
+          console.warn('Unauthorized access attempt by authenticated user:', session.user.email);
+          await supabase.auth.signOut();
+          router.push('/admin/login?error=unauthorized');
+          return;
+        }
+
+        setAdminEmail(session.user.email || 'Supabase Admin');
       } else {
         const mockAuth = localStorage.getItem('gloopo_mock_admin_auth');
         if (mockAuth !== 'true') {
@@ -313,8 +739,9 @@ const AdminDashboardPage = () => {
         }
       }
 
-      // Load Settings from Supabase or LocalStorage
+      // Load Settings and Stats from Supabase or LocalStorage
       await fetchWebsiteSettings();
+      await fetchDashboardStats();
       setLoading(false);
     };
     authenticateAndLoad();
@@ -332,6 +759,113 @@ const AdminDashboardPage = () => {
       localStorage.setItem('admin_settings_sub_tab', settingsSubTab);
     }
   }, [settingsSubTab, loading]);
+
+  const fetchDashboardStats = async () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        // 1. Fetch active admins count
+        const { count: adminCount, error: adminErr } = await supabase
+          .from('admin_profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('role', 'admin')
+          .eq('status', 'active');
+        if (!adminErr && adminCount !== null) {
+          setActiveAdminsCount(adminCount);
+        }
+
+        // 2. Fetch traffic history (last 7 entries)
+        const { data: trafficData, error: trafficErr } = await supabase
+          .from('traffic_stats')
+          .select('*')
+          .order('date', { ascending: false })
+          .limit(7);
+        
+        if (!trafficErr && trafficData) {
+          // Reverse to date ascending order for charting
+          const sortedTraffic = [...trafficData].reverse();
+          setTrafficHistory(sortedTraffic);
+
+          // Calculate totals and today's stats
+          let totalViews = 0;
+          let totalVisitors = 0;
+          let todayViews = 0;
+          let todayVisitors = 0;
+
+          // Fetch overall totals from DB
+          const { data: allTraffic } = await supabase.from('traffic_stats').select('page_views, unique_visitors');
+          if (allTraffic) {
+            allTraffic.forEach(entry => {
+              totalViews += entry.page_views || 0;
+              totalVisitors += entry.unique_visitors || 0;
+            });
+          }
+
+          // Today's entry
+          const todayEntry = trafficData.find(s => s.date === todayStr);
+          if (todayEntry) {
+            todayViews = todayEntry.page_views || 0;
+            todayVisitors = todayEntry.unique_visitors || 0;
+          }
+
+          setTodayPageViews(todayViews);
+          setTodayUniqueVisitors(todayVisitors);
+          setTotalPageViews(totalViews);
+          setTotalUniqueVisitors(totalVisitors);
+        }
+      } catch (err) {
+        console.error('Failed to load dashboard stats from Supabase:', err);
+      }
+    } else {
+      // Mock Mode Loader
+      try {
+        const stored = localStorage.getItem('gloopo_mock_traffic_stats');
+        let stats: any[] = stored ? JSON.parse(stored) : [];
+
+        // If no stats, generate simulated 7 days of stats
+        if (stats.length === 0) {
+          const today = new Date();
+          for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(today.getDate() - i);
+            const dStr = d.toISOString().split('T')[0];
+            stats.push({
+              date: dStr,
+              page_views: Math.floor(Math.random() * 80) + 100,
+              unique_visitors: Math.floor(Math.random() * 30) + 40
+            });
+          }
+          localStorage.setItem('gloopo_mock_traffic_stats', JSON.stringify(stats));
+        }
+
+        // Set state from mock data
+        setTrafficHistory(stats);
+        setActiveAdminsCount(4); // Mock admin count
+
+        let totalViews = 0;
+        let totalVisitors = 0;
+        let todayViews = 0;
+        let todayVisitors = 0;
+
+        stats.forEach(entry => {
+          totalViews += entry.page_views || 0;
+          totalVisitors += entry.unique_visitors || 0;
+          if (entry.date === todayStr) {
+            todayViews = entry.page_views || 0;
+            todayVisitors = entry.unique_visitors || 0;
+          }
+        });
+
+        setTodayPageViews(todayViews);
+        setTodayUniqueVisitors(todayVisitors);
+        setTotalPageViews(totalViews);
+        setTotalUniqueVisitors(totalVisitors);
+      } catch (err) {
+        console.error('Failed to load mock traffic statistics:', err);
+      }
+    }
+  };
 
   const fetchWebsiteSettings = async () => {
     if (isSupabaseConfigured && supabase) {
@@ -409,7 +943,6 @@ const AdminDashboardPage = () => {
               setNftsMaintenanceMode(val.maintenanceMode !== false);
               setNftsCrystaraCreator(val.crystaraCreator || '');
               setNftsCrystaraCollection(val.crystaraCollection || '');
-              setNftsCrystaraApiKey(val.crystaraApiKey || '');
               setNftsCrystaraNetwork(val.crystaraNetwork || 'mainnet');
               setNftsOgpassCollection(val.ogpassCollection || '');
               setNftsOgpassMaintenance(val.ogpassMaintenance !== false);
@@ -423,6 +956,8 @@ const AdminDashboardPage = () => {
               setNftsGen03Collection(val.gen03Collection || '');
               setNftsGen03Maintenance(val.gen03Maintenance !== false);
               setNftsGen03Creator(val.gen03Creator || val.crystaraCreator || '');
+            } else if (item.key === 'crystara_api_key') {
+              setNftsCrystaraApiKey(val.apiKey || '');
             }
           });
         }
@@ -431,7 +966,7 @@ const AdminDashboardPage = () => {
       }
     } else {
       // --- LOAD FROM LOCAL STORAGE MOCK ---
-      const keys = ['general', 'about', 'tokenomics', 'socials', 'brandkit', 'roadmap', 'buttons', 'nfts'];
+      const keys = ['general', 'about', 'tokenomics', 'socials', 'brandkit', 'roadmap', 'buttons', 'nfts', 'crystara_api_key'];
       keys.forEach(k => {
         const val = localStorage.getItem(`gloopo_mock_setting_${k}`);
         if (val) {
@@ -503,7 +1038,6 @@ const AdminDashboardPage = () => {
             setNftsMaintenanceMode(parsed.maintenanceMode !== false);
             setNftsCrystaraCreator(parsed.crystaraCreator || '');
             setNftsCrystaraCollection(parsed.crystaraCollection || '');
-            setNftsCrystaraApiKey(parsed.crystaraApiKey || '');
             setNftsCrystaraNetwork(parsed.crystaraNetwork || 'mainnet');
             setNftsOgpassCollection(parsed.ogpassCollection || '');
             setNftsOgpassMaintenance(parsed.ogpassMaintenance !== false);
@@ -517,6 +1051,8 @@ const AdminDashboardPage = () => {
             setNftsGen03Collection(parsed.gen03Collection || '');
             setNftsGen03Maintenance(parsed.gen03Maintenance !== false);
             setNftsGen03Creator(parsed.gen03Creator || parsed.crystaraCreator || '');
+          } else if (k === 'crystara_api_key') {
+            setNftsCrystaraApiKey(parsed.apiKey || '');
           }
         }
       });
@@ -552,6 +1088,8 @@ const AdminDashboardPage = () => {
       setTimeout(() => {
         setSaveSuccess(null);
       }, 3000);
+      const actionDetail = sectionKey === 'crystara_api_key' ? 'Updated Crystara API Key' : `Updated ${label} settings`;
+      await logAdminAction('update_settings', actionDetail);
     } catch (err: any) {
       showToast(`Failed to save ${label}: ${err.message}`, 'error');
     } finally {
@@ -587,6 +1125,7 @@ const AdminDashboardPage = () => {
     setWhitelist([newEntry, ...whitelist]);
     setNewWhitelistAddress('');
     setNewWhitelistName('');
+    logAdminAction('add_whitelist', `Added address ${newWhitelistAddress} (${newWhitelistName || 'Community Member'}) to Whitelist`);
   };
 
   // --- ROADMAP CMS LIST BUILDER HELPERS ---
@@ -737,6 +1276,7 @@ const AdminDashboardPage = () => {
 
         showToast('Partner logo uploaded successfully!', 'success');
         await fetchPartnersList();
+        await logAdminAction('upload_partner', `Uploaded partner logo: ${file.name}`);
       } else {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -751,6 +1291,7 @@ const AdminDashboardPage = () => {
           setPartnersList(updated);
           localStorage.setItem('gloopo_mock_partners', JSON.stringify(updated));
           showToast('Logo saved locally (mock mode).', 'success');
+          logAdminAction('upload_partner', `Uploaded partner logo (mock): ${file.name}`);
         };
         reader.readAsDataURL(file);
       }
@@ -772,6 +1313,7 @@ const AdminDashboardPage = () => {
         if (error) throw error;
         showToast('Partner logo deleted successfully.', 'success');
         await fetchPartnersList();
+        await logAdminAction('delete_partner', `Deleted partner logo: ${partnerName}`);
       } catch (err: any) {
         console.error('Failed to delete partner:', err);
         showToast(`Delete failed: ${err.message}`, 'error');
@@ -781,6 +1323,7 @@ const AdminDashboardPage = () => {
       setPartnersList(updated);
       localStorage.setItem('gloopo_mock_partners', JSON.stringify(updated));
       showToast('Partner removed (mock mode).', 'success');
+      logAdminAction('delete_partner', `Deleted partner logo (mock): ${partnerName}`);
     }
   };
 
@@ -1003,6 +1546,103 @@ const AdminDashboardPage = () => {
     return email ? email.slice(0, 2).toUpperCase() : 'AD';
   };
 
+  if (loading) {
+    return (
+      <div style={{
+        height: '100vh',
+        width: '100vw',
+        background: '#030806',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff',
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: 9999
+      }}>
+        {/* Background decorative glows */}
+        <div style={{
+          position: 'absolute',
+          width: '300px',
+          height: '300px',
+          background: 'rgba(0, 255, 136, 0.05)',
+          borderRadius: '50%',
+          filter: 'blur(100px)',
+          top: '20%',
+          left: '30%',
+          pointerEvents: 'none'
+        }} />
+        <div style={{
+          position: 'absolute',
+          width: '300px',
+          height: '300px',
+          background: 'rgba(187, 255, 0, 0.03)',
+          borderRadius: '50%',
+          filter: 'blur(100px)',
+          bottom: '20%',
+          right: '30%',
+          pointerEvents: 'none'
+        }} />
+
+        {/* Loading Content */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          zIndex: 1
+        }}>
+          {/* Logo or Shield Icon */}
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '16px',
+            background: 'rgba(0, 255, 136, 0.08)',
+            border: '1px solid rgba(0, 255, 136, 0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '1.5rem',
+            boxShadow: '0 0 30px rgba(0, 255, 136, 0.1)'
+          }}>
+            <Shield size={32} style={{ color: '#00ff88' }} />
+          </div>
+
+          {/* Spinner */}
+          <div style={{
+            width: '28px',
+            height: '28px',
+            border: '2px solid rgba(255,255,255,0.05)',
+            borderTopColor: '#00ff88',
+            borderRadius: '50%',
+            marginBottom: '1rem',
+            animation: 'spin 0.8s linear infinite'
+          }} />
+
+          <p style={{
+            margin: 0,
+            fontSize: '0.85rem',
+            color: 'rgba(255, 255, 255, 0.6)',
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase',
+            fontWeight: 600
+          }}>
+            Securing Connection
+          </p>
+        </div>
+
+        {/* Inline CSS for keyframes */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        ` }} />
+      </div>
+    );
+  }
+
   return (
     <div className="admin-layout">
       {/* ── LOGOUT CONFIRMATION MODAL ── */}
@@ -1025,6 +1665,34 @@ const AdminDashboardPage = () => {
               <button className="logout-confirm-btn" onClick={() => { setShowLogoutModal(false); handleLogout(); }}>
                 <LogOut size={15} />
                 Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CLEAR LOGS CONFIRMATION MODAL ── */}
+      {showClearLogsModal && (
+        <div className="logout-overlay" onClick={() => setShowClearLogsModal(false)}>
+          <div className="logout-modal" onClick={e => e.stopPropagation()}>
+            <div className="logout-modal-icon" style={{ background: 'rgba(255, 60, 80, 0.08)', border: '1px solid rgba(255, 60, 80, 0.25)', color: '#ff3c50', boxShadow: '0 0 24px rgba(255, 60, 80, 0.15)' }}>
+              <Trash2 size={24} />
+            </div>
+            <h3 className="logout-modal-title">Clear Activity Logs</h3>
+            <p className="logout-modal-desc">Are you sure you want to clear all admin activity logs? This action is permanent and cannot be undone.</p>
+            <div className="logout-modal-actions">
+              <button className="logout-cancel-btn" onClick={() => setShowClearLogsModal(false)}>
+                Cancel
+              </button>
+              <button 
+                className="logout-confirm-btn" 
+                onClick={async () => { 
+                  setShowClearLogsModal(false); 
+                  await executeClearLogs(); 
+                }}
+              >
+                <Trash2 size={15} />
+                Clear All
               </button>
             </div>
           </div>
@@ -1071,8 +1739,12 @@ const AdminDashboardPage = () => {
       {/* LEFT SIDEBAR PANEL */}
       <aside className="admin-sidebar">
         <div className="sidebar-brand">
-          <div className="logo-shield">
-            <Shield size={22} />
+          <div className="logo-shield" style={{ overflow: 'hidden', padding: 0 }}>
+            <img 
+              src="https://xnpqbgmqbjxgvhsojlft.supabase.co/storage/v1/object/public/brand-kit/bafkreifass4k3wmarrl76bozj42r4dm3b2ixcsmfgwocq3wek3ue2hgaee.jpg" 
+              alt="Gloopo Logo" 
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
           </div>
           <div>
             <span className="platform-tag">GLOOPO CONTROL</span>
@@ -1103,22 +1775,22 @@ const AdminDashboardPage = () => {
             <span>Website Settings</span>
             <ChevronRight size={14} className="chevron" />
           </button>
-          
+
           <button 
-            onClick={() => setCurrentTab('contracts')} 
-            className={`nav-item ${currentTab === 'contracts' ? 'active' : ''}`}
+            onClick={() => setCurrentTab('profile')} 
+            className={`nav-item ${currentTab === 'profile' ? 'active' : ''}`}
           >
-            <Settings size={18} />
-            <span>Smart Contracts</span>
+            <User size={18} />
+            <span>Profile Settings</span>
             <ChevronRight size={14} className="chevron" />
           </button>
-          
+
           <button 
-            onClick={() => setCurrentTab('whitelist')} 
-            className={`nav-item ${currentTab === 'whitelist' ? 'active' : ''}`}
+            onClick={() => setCurrentTab('logs')} 
+            className={`nav-item ${currentTab === 'logs' ? 'active' : ''}`}
           >
-            <Layers size={18} />
-            <span>NFT Whitelist</span>
+            <Activity size={18} />
+            <span>Logs</span>
             <ChevronRight size={14} className="chevron" />
           </button>
           
@@ -1153,8 +1825,8 @@ const AdminDashboardPage = () => {
             <span className="active-crumb">
               {currentTab === 'overview' && 'Console Overview'}
               {currentTab === 'settings' && 'Website Settings (CMS)'}
-              {currentTab === 'contracts' && 'Smart Contract Controls'}
-              {currentTab === 'whitelist' && 'NFT Whitelist Manager'}
+              {currentTab === 'profile' && 'Profile Settings'}
+              {currentTab === 'logs' && 'Admin Activity Logs'}
             </span>
           </div>
 
@@ -1191,71 +1863,44 @@ const AdminDashboardPage = () => {
         {/* 1. OVERVIEW PANEL */}
         {currentTab === 'overview' && (
           <div className="tab-content fade-in">
-            <div className="development-mode-container" style={{ position: 'relative', overflow: 'hidden', borderRadius: '16px' }}>
-              <div className="development-overlay">
-                <div className="development-badge">
-                  <AlertTriangle size={18} />
-                  <span>Under Development</span>
-                </div>
-                <p className="development-text" style={{ maxWidth: '400px', margin: '0 auto', fontSize: '0.92rem', lineHeight: '1.6' }}>
-                  This dashboard console is currently in development mode. Protocol statistics and live swap tracking will be active upon mainnet deployment.
-                </p>
-              </div>
-              <div className="development-content-blurred">
                 {/* Level 1 Metrics Grid */}
                 <div className="metrics-grid">
-                  <div className="metric-box glass-card">
-                    <div className="metric-icon blue">
-                      <DollarSign size={20} />
-                    </div>
-                    <div className="metric-info">
-                      <span className="label">Total Value Locked</span>
-                      <h2>$4,891,320</h2>
-                      <span className="change positive">
-                        <TrendingUp size={12} />
-                        <span>+12.4% vs last week</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="metric-box glass-card">
-                    <div className="metric-icon green">
-                      <Cpu size={20} />
-                    </div>
-                    <div className="metric-info">
-                      <span className="label">SUPRA Pool Liquidity</span>
-                      <h2>842,590 SUPRA</h2>
-                      <span className="change positive">
-                        <TrendingUp size={12} />
-                        <span>+8.2% (24h)</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="metric-box glass-card">
+                  <div className="metric-box glass-card purple-theme">
                     <div className="metric-icon purple">
                       <Users size={20} />
                     </div>
                     <div className="metric-info">
-                      <span className="label">Total Gloopo Minters</span>
-                      <h2>{whitelist.length + 1479} Wallets</h2>
-                      <span className="change positive">
-                        <TrendingUp size={12} />
-                        <span>+{whitelist.length - 3 + 46} minters today</span>
+                      <span className="label">Active Admins</span>
+                      <h2>{activeAdminsCount} Admins</h2>
+                      <span className="change positive" style={{ color: 'var(--text-muted)' }}>
+                        <span>Active in database</span>
                       </span>
                     </div>
                   </div>
 
-                  <div className="metric-box glass-card">
-                    <div className="metric-icon neon">
-                      <Activity size={20} />
+                  <div className="metric-box glass-card blue-theme">
+                    <div className="metric-icon blue" style={{ background: 'rgba(0, 150, 255, 0.08)', color: '#0096ff' }}>
+                      <Eye size={20} />
                     </div>
                     <div className="metric-info">
-                      <span className="label">Swap Efficiency</span>
-                      <h2>99.87%</h2>
+                      <span className="label">Total Page Views</span>
+                      <h2>{totalPageViews.toLocaleString()}</h2>
                       <span className="change positive">
                         <TrendingUp size={12} />
-                        <span>Gas optimized</span>
+                        <span>+{todayPageViews} today</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="metric-box glass-card neon-theme">
+                    <div className="metric-icon neon">
+                      <Globe size={20} />
+                    </div>
+                    <div className="metric-info">
+                      <span className="label">Unique Visitors</span>
+                      <h2>{todayUniqueVisitors}</h2>
+                      <span className="change positive" style={{ color: 'var(--text-muted)' }}>
+                        <span>{totalUniqueVisitors.toLocaleString()} total visitors</span>
                       </span>
                     </div>
                   </div>
@@ -1263,86 +1908,122 @@ const AdminDashboardPage = () => {
 
                 {/* Bento Grid */}
                 <div className="bento-grid dashboard-bento">
-                  {/* Quick Controls */}
-                  <div className="glass-card bento-panel controls-quick">
-                    <div className="panel-header">
-                      <Settings size={18} className="panel-icon" />
-                      <h3>Protocol Switches</h3>
+                  {/* Traffic Analytics Panel */}
+                  <div className="glass-card bento-panel traffic-panel-quick" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', gridColumn: 'span 12' }}>
+                    <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Activity size={18} className="panel-icon" style={{ color: 'var(--primary)' }} />
+                        <h3>Traffic Analytics</h3>
+                      </div>
+                      <span className="live-pill" style={{ background: 'rgba(0, 150, 255, 0.1)', color: '#0096ff', border: '1px solid rgba(0, 150, 255, 0.15)' }}>
+                        <span className="dot" style={{ background: '#0096ff' }}></span>
+                        <span>7D LOGS</span>
+                      </span>
                     </div>
-                    <p className="panel-desc">Quickly toggle vital parameters for the Gloopo platform contract.</p>
-                    
-                    <div className="toggle-list small">
-                      <div className="toggle-item">
-                        <div className="toggle-info">
-                          <h4>Gen 1 NFT Minting</h4>
+
+                    <div className="traffic-analytics-content">
+                      <div className="chart-section" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        {/* SVG Chart */}
+                        <div style={{ position: 'relative', height: '180px', width: '100%', marginTop: '0.5rem' }}>
+                          {trafficHistory.length > 0 ? (
+                            <svg viewBox="0 0 300 120" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                              <defs>
+                                <linearGradient id="viewsGrad" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#00ff88" stopOpacity="0.2"/>
+                                  <stop offset="100%" stopColor="#00ff88" stopOpacity="0.0"/>
+                                </linearGradient>
+                                <linearGradient id="visitorsGrad" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#0096ff" stopOpacity="0.2"/>
+                                  <stop offset="100%" stopColor="#0096ff" stopOpacity="0.0"/>
+                                </linearGradient>
+                              </defs>
+
+                              {/* Grid Lines */}
+                              <line x1="0" y1="20" x2="300" y2="20" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+                              <line x1="0" y1="60" x2="300" y2="60" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+                              <line x1="0" y1="100" x2="300" y2="100" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+
+                              {/* Page Views Area & Line */}
+                              {(() => {
+                                const maxViews = Math.max(...trafficHistory.map(h => h.page_views || 1), 1);
+                                const points = trafficHistory.map((h, i) => {
+                                  const x = (i / (trafficHistory.length - 1)) * 300;
+                                  const y = 100 - ((h.page_views || 0) / maxViews) * 80;
+                                  return `${x},${y}`;
+                                }).join(' ');
+
+                                const fillPoints = `0,100 ${points} 300,100`;
+
+                                return (
+                                  <>
+                                    <polygon points={fillPoints} fill="url(#viewsGrad)" />
+                                    <polyline points={points} fill="none" stroke="#00ff88" strokeWidth="2" />
+                                  </>
+                                );
+                              })()}
+
+                              {/* Unique Visitors Line */}
+                              {(() => {
+                                const maxVisitors = Math.max(...trafficHistory.map(h => h.unique_visitors || 1), 1);
+                                const points = trafficHistory.map((h, i) => {
+                                  const x = (i / (trafficHistory.length - 1)) * 300;
+                                  const y = 100 - ((h.unique_visitors || 0) / maxVisitors) * 80;
+                                  return `${x},${y}`;
+                                }).join(' ');
+
+                                return (
+                                  <polyline points={points} fill="none" stroke="#0096ff" strokeWidth="1.5" strokeDasharray="3,3" />
+                                );
+                              })()}
+                            </svg>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                              No traffic history loaded
+                            </div>
+                          )}
                         </div>
-                        <button 
-                          onClick={() => setIsMintingActive(!isMintingActive)} 
-                          className={`toggle-btn ${isMintingActive ? 'active' : ''}`}
-                        >
-                          {isMintingActive ? <ToggleRight size={34} /> : <ToggleLeft size={34} />}
-                        </button>
+
+                        {/* Chart Legend */}
+                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', marginTop: '-0.25rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span style={{ width: '8px', height: '8px', background: '#00ff88', borderRadius: '2px' }} />
+                            <span style={{ color: 'var(--text-muted)' }}>Page Views</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span style={{ width: '8px', height: '8px', border: '1.5px dashed #0096ff', borderRadius: '2px' }} />
+                            <span style={{ color: 'var(--text-muted)' }}>Unique Visitors</span>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="toggle-item">
-                        <div className="toggle-info">
-                          <h4>Swap Pool Emergency Lock</h4>
+                      <div className="table-section">
+                        {/* Small Breakdown Table */}
+                        <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '6px' }}>
+                          <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse', textAlign: 'left' }}>
+                            <thead>
+                              <tr style={{ background: 'rgba(255,255,255,0.01)', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                <th style={{ padding: '0.4rem 0.6rem', color: 'var(--text-muted)' }}>Date</th>
+                                <th style={{ padding: '0.4rem 0.6rem', color: 'var(--text-muted)', textAlign: 'right' }}>Views</th>
+                                <th style={{ padding: '0.4rem 0.6rem', color: 'var(--text-muted)', textAlign: 'right' }}>Visitors</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {trafficHistory.slice().reverse().map((h, i) => (
+                                <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                                  <td style={{ padding: '0.35rem 0.6rem', color: 'var(--text-muted)' }}>
+                                    {new Date(h.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  </td>
+                                  <td style={{ padding: '0.35rem 0.6rem', textAlign: 'right', fontWeight: 600 }}>{h.page_views}</td>
+                                  <td style={{ padding: '0.35rem 0.6rem', textAlign: 'right', color: '#0096ff' }}>{h.unique_visitors}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
-                        <button 
-                          onClick={() => setIsSwapPaused(!isSwapPaused)} 
-                          className={`toggle-btn ${isSwapPaused ? 'warning' : ''}`}
-                        >
-                          {isSwapPaused ? <ToggleRight size={34} /> : <ToggleLeft size={34} />}
-                        </button>
                       </div>
-                    </div>
-                    <button onClick={() => setCurrentTab('contracts')} className="btn-text-link">
-                      <span>Open Full Smart Contracts Settings</span>
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
-
-                  {/* Recent Swap activity */}
-                  <div className="glass-card bento-panel transaction-panel-quick">
-                    <div className="panel-header">
-                      <Activity size={18} className="panel-icon" />
-                      <h3>Recent Swap Stream</h3>
-                      <div className="live-pill">
-                        <span className="dot animate-ping"></span>
-                        <span>LIVE FEED</span>
-                      </div>
-                    </div>
-                    
-                    <div className="table-responsive">
-                      <table className="admin-table">
-                        <thead>
-                          <tr>
-                            <th>Wallet</th>
-                            <th>Type</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {transactions.slice(0, 4).map((tx) => (
-                            <tr key={tx.id}>
-                              <td className="wallet-addr">{tx.wallet}</td>
-                              <td className="type-badge">{tx.type}</td>
-                              <td>{tx.amount}</td>
-                              <td>
-                                <span className={`status-badge ${tx.status}`}>
-                                  <span>{tx.status}</span>
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
           </div>
         )}
 
@@ -1430,6 +2111,7 @@ const AdminDashboardPage = () => {
                   <Users size={14} />
                   <span>Partners</span>
                 </button>
+
               </div>
 
               <div className="divider-h small"></div>
@@ -1498,23 +2180,12 @@ const AdminDashboardPage = () => {
                                     return <Icon size={20} />;
                                   })()}
                                 </div>
-                                <select 
-                                  value={techCard1Icon} 
-                                  onChange={(e) => setTechCard1Icon(e.target.value)}
-                                  className="flat-select"
+                                <CustomDropdown
+                                  value={techCard1Icon}
+                                  onChange={(val) => setTechCard1Icon(val)}
+                                  options={TECH_ICON_OPTIONS}
                                   style={{ width: '100%' }}
-                                >
-                                  <option value="Zap">Zap (Lightning)</option>
-                                  <option value="RefreshCcw">RefreshCcw (Circular)</option>
-                                  <option value="GraduationCap">Graduation (Cap)</option>
-                                  <option value="Cpu">Cpu (Processor)</option>
-                                  <option value="Shield">Shield (Security)</option>
-                                  <option value="Activity">Activity (Pulse)</option>
-                                  <option value="Globe">Globe (Network)</option>
-                                  <option value="Terminal">Terminal (Developer)</option>
-                                  <option value="Lock">Lock (Secure)</option>
-                                  <option value="Settings">Settings (Control)</option>
-                                </select>
+                                />
                               </div>
                             </div>
                             <div className="cms-group" style={{ flex: 1 }}>
@@ -1562,23 +2233,12 @@ const AdminDashboardPage = () => {
                                     return <Icon size={20} />;
                                   })()}
                                 </div>
-                                <select 
-                                  value={techCard2Icon} 
-                                  onChange={(e) => setTechCard2Icon(e.target.value)}
-                                  className="flat-select"
+                                <CustomDropdown
+                                  value={techCard2Icon}
+                                  onChange={(val) => setTechCard2Icon(val)}
+                                  options={TECH_ICON_OPTIONS}
                                   style={{ width: '100%' }}
-                                >
-                                  <option value="Zap">Zap (Lightning)</option>
-                                  <option value="RefreshCcw">RefreshCcw (Circular)</option>
-                                  <option value="GraduationCap">Graduation (Cap)</option>
-                                  <option value="Cpu">Cpu (Processor)</option>
-                                  <option value="Shield">Shield (Security)</option>
-                                  <option value="Activity">Activity (Pulse)</option>
-                                  <option value="Globe">Globe (Network)</option>
-                                  <option value="Terminal">Terminal (Developer)</option>
-                                  <option value="Lock">Lock (Secure)</option>
-                                  <option value="Settings">Settings (Control)</option>
-                                </select>
+                                />
                               </div>
                             </div>
                             <div className="cms-group" style={{ flex: 1 }}>
@@ -1626,23 +2286,12 @@ const AdminDashboardPage = () => {
                                     return <Icon size={20} />;
                                   })()}
                                 </div>
-                                <select 
-                                  value={techCard3Icon} 
-                                  onChange={(e) => setTechCard3Icon(e.target.value)}
-                                  className="flat-select"
+                                <CustomDropdown
+                                  value={techCard3Icon}
+                                  onChange={(val) => setTechCard3Icon(val)}
+                                  options={TECH_ICON_OPTIONS}
                                   style={{ width: '100%' }}
-                                >
-                                  <option value="Zap">Zap (Lightning)</option>
-                                  <option value="RefreshCcw">RefreshCcw (Circular)</option>
-                                  <option value="GraduationCap">Graduation (Cap)</option>
-                                  <option value="Cpu">Cpu (Processor)</option>
-                                  <option value="Shield">Shield (Security)</option>
-                                  <option value="Activity">Activity (Pulse)</option>
-                                  <option value="Globe">Globe (Network)</option>
-                                  <option value="Terminal">Terminal (Developer)</option>
-                                  <option value="Lock">Lock (Secure)</option>
-                                  <option value="Settings">Settings (Control)</option>
-                                </select>
+                                />
                               </div>
                             </div>
                             <div className="cms-group" style={{ flex: 1 }}>
@@ -2172,20 +2821,11 @@ const AdminDashboardPage = () => {
                               </div>
                               <div className="cms-group" style={{ margin: 0 }}>
                                 <label>Asset Format / Badge</label>
-                                <select 
-                                  value={newAssetFormat} 
-                                  onChange={(e) => setNewAssetFormat(e.target.value)} 
-                                  className="flat-input"
-                                  style={{ background: '#020604', color: '#fff', border: '1px solid rgba(255,255,255,0.08)' }}
-                                >
-                                  <option value="High-Res PNG">High-Res PNG</option>
-                                  <option value="Transparent PNG">Transparent PNG</option>
-                                  <option value="Isolated PNG">Isolated PNG</option>
-                                  <option value="Wallpapers PNG">Wallpapers PNG</option>
-                                  <option value="Vector GIF">Vector GIF</option>
-                                  <option value="Futuristic JPG">Futuristic JPG</option>
-                                  <option value="Vector SVG">Vector SVG</option>
-                                </select>
+                                <CustomDropdown
+                                  value={newAssetFormat}
+                                  onChange={(val) => setNewAssetFormat(val)}
+                                  options={ASSET_FORMAT_OPTIONS}
+                                />
                               </div>
                             </div>
 
@@ -2319,15 +2959,11 @@ const AdminDashboardPage = () => {
 
                           <div className="input-field-col min-w-120">
                             <label>Operational Status</label>
-                            <select 
+                            <CustomDropdown
                               value={newPhaseStatus}
-                              onChange={(e) => setNewPhaseStatus(e.target.value as any)}
-                              className="flat-select"
-                            >
-                              <option value="completed">Completed</option>
-                              <option value="active">Active</option>
-                              <option value="pending">Pending</option>
-                            </select>
+                              onChange={(val) => setNewPhaseStatus(val as any)}
+                              options={ROADMAP_STATUS_OPTIONS}
+                            />
                           </div>
                         </div>
 
@@ -2786,38 +3422,13 @@ const AdminDashboardPage = () => {
                         <div className="divider-h" style={{ margin: '1.5rem 0' }}></div>
                         <h4 style={{ marginBottom: '1.25rem', color: 'var(--primary)', textTransform: 'uppercase', fontSize: '0.9rem', letterSpacing: '0.05em' }}>Crystara.trade Integration (Shared)</h4>
 
-                        <div className="cms-group">
-                          <label>Supra Creator Address</label>
-                          <input 
-                            type="text" 
-                            placeholder="e.g. 0x7a8d56b0..." 
-                            value={nftsCrystaraCreator} 
-                            onChange={(e) => setNftsCrystaraCreator(e.target.value)} 
-                            className="flat-input font-mono"
-                          />
-                        </div>
-
-                        <div className="cms-group">
-                          <label>Crystara API Key</label>
-                          <input 
-                            type="password" 
-                            placeholder="Enter x-api-key" 
-                            value={nftsCrystaraApiKey} 
-                            onChange={(e) => setNftsCrystaraApiKey(e.target.value)} 
-                            className="flat-input font-mono"
-                          />
-                        </div>
-
                         <div className="cms-group" style={{ marginBottom: '2rem' }}>
                           <label>API Network Environment</label>
-                          <select 
-                            value={nftsCrystaraNetwork} 
-                            onChange={(e) => setNftsCrystaraNetwork(e.target.value as any)} 
-                            className="flat-select"
-                          >
-                            <option value="mainnet">Mainnet (Production)</option>
-                            <option value="testnet">Testnet (Development)</option>
-                          </select>
+                          <CustomDropdown
+                            value={nftsCrystaraNetwork}
+                            onChange={(val) => setNftsCrystaraNetwork(val as any)}
+                            options={CRYSTARA_NETWORK_OPTIONS}
+                          />
                         </div>
 
                         <div className="divider-h" style={{ margin: '1.5rem 0' }}></div>
@@ -2992,29 +3603,35 @@ const AdminDashboardPage = () => {
                         </div>
 
                         <button 
-                          onClick={() => handleSaveSettings('nfts', { 
-                            maintenanceMode: nftsMaintenanceMode,
-                            crystaraCreator: nftsCrystaraCreator,
-                            crystaraCollection: nftsGen01Collection || nftsCrystaraCollection, // Fallback for safety
-                            crystaraApiKey: nftsCrystaraApiKey,
-                            crystaraNetwork: nftsCrystaraNetwork,
-                            ogpassCollection: nftsOgpassCollection,
-                            ogpassMaintenance: nftsOgpassMaintenance,
-                            ogpassCreator: nftsOgpassCreator,
-                            gen01Collection: nftsGen01Collection,
-                            gen01Maintenance: nftsGen01Maintenance,
-                            gen01Creator: nftsGen01Creator,
-                            gen02Collection: nftsGen02Collection,
-                            gen02Maintenance: nftsGen02Maintenance,
-                            gen02Creator: nftsGen02Creator,
-                            gen03Collection: nftsGen03Collection,
-                            gen03Maintenance: nftsGen03Maintenance,
-                            gen03Creator: nftsGen03Creator
-                          })}
+                          onClick={async () => {
+                            // First save sensitive API key under its own secure key
+                            await handleSaveSettings('crystara_api_key', {
+                              apiKey: nftsCrystaraApiKey
+                            });
+                            // Then save non-sensitive settings under nfts
+                            await handleSaveSettings('nfts', { 
+                              maintenanceMode: nftsMaintenanceMode,
+                              crystaraCreator: nftsCrystaraCreator,
+                              crystaraCollection: nftsGen01Collection || nftsCrystaraCollection, // Fallback for safety
+                              crystaraNetwork: nftsCrystaraNetwork,
+                              ogpassCollection: nftsOgpassCollection,
+                              ogpassMaintenance: nftsOgpassMaintenance,
+                              ogpassCreator: nftsOgpassCreator,
+                              gen01Collection: nftsGen01Collection,
+                              gen01Maintenance: nftsGen01Maintenance,
+                              gen01Creator: nftsGen01Creator,
+                              gen02Collection: nftsGen02Collection,
+                              gen02Maintenance: nftsGen02Maintenance,
+                              gen02Creator: nftsGen02Creator,
+                              gen03Collection: nftsGen03Collection,
+                              gen03Maintenance: nftsGen03Maintenance,
+                              gen03Creator: nftsGen03Creator
+                            });
+                          }}
                           className="flat-save-btn btn-primary"
-                          disabled={saveLoading === 'nfts'}
+                          disabled={saveLoading === 'nfts' || saveLoading === 'crystara_api_key'}
                         >
-                          {saveLoading === 'nfts' ? (
+                          { (saveLoading === 'nfts' || saveLoading === 'crystara_api_key') ? (
                             <span className="spinner-white"></span>
                           ) : saveSuccess === 'nfts' ? (
                             <><Check size={16} /><span>Saved Successfully!</span></>
@@ -3275,210 +3892,451 @@ const AdminDashboardPage = () => {
                   </div>
                 )}
 
+
+
               </div>
 
             </div>
           </div>
         )}
 
-        {/* 3. SMART CONTRACTS PANEL */}
-        {currentTab === 'contracts' && (
+
+
+        {/* 6. PROFILE SETTINGS PANEL */}
+        {currentTab === 'profile' && (
           <div className="tab-content fade-in">
-            <div className="glass-card single-panel development-mode-container">
-              <div className="development-overlay">
-                <div className="development-badge">
-                  <AlertTriangle size={18} />
-                  <span>Under Development</span>
-                </div>
-                <p className="development-text">
-                  This section is currently in development mode. Smart contract controls will be available in the next release.
-                </p>
+            <div className="glass-card single-panel" style={{ maxWidth: '800px', margin: '0 auto' }}>
+              <div className="panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                <User size={20} className="panel-icon" style={{ color: 'var(--primary)' }} />
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Profile Settings</h3>
               </div>
-              <div className="development-content-blurred">
-                <div className="panel-header">
-                  <Settings size={20} className="panel-icon" />
-                  <h3>Smart Contract Controls</h3>
-                </div>
-                <p className="panel-desc">Modify Gloopo Liquidity Pool and Genesis Mint parameters directly on the Supra L1 testnet.</p>
-                
-                <div className="contract-controls-grid">
-                  <div className="control-card">
-                    <h4>Emergency Circuit Breaker</h4>
-                    <p>Instantly freezes or resumes liquidity pool token swaps in the event of high volatility or an exploit.</p>
-                    <div className="control-action-row">
-                      <span className={`state-label ${isSwapPaused ? 'paused' : 'active'}`}>
-                        STATUS: {isSwapPaused ? 'PAUSED / LOCKED' : 'OPERATIONAL / ACTIVE'}
-                      </span>
-                      <button 
-                        onClick={() => setIsSwapPaused(!isSwapPaused)}
-                        className={`btn-control-toggle ${isSwapPaused ? 'resume' : 'pause'}`}
-                      >
-                        {isSwapPaused ? 'Resume Swaps' : 'Pause Swaps (Emergency)'}
-                      </button>
-                    </div>
-                  </div>
+              <p className="panel-desc" style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Manage your administrator profile and configure two-factor authentication (MFA) security.
+              </p>
 
-                  <div className="control-card">
-                    <h4>NFT Minting Gate</h4>
-                    <p>Enable or disable the minting portal for Whitelisted addresses. Disabling prevents any new Genesis NFT mints.</p>
-                    <div className="control-action-row">
-                      <span className={`state-label ${isMintingActive ? 'active' : 'paused'}`}>
-                        MINT GATE: {isMintingActive ? 'OPEN' : 'CLOSED'}
-                      </span>
-                      <button 
-                        onClick={() => setIsMintingActive(!isMintingActive)}
-                        className={`btn-control-toggle ${isMintingActive ? 'pause' : 'resume'}`}
-                      >
-                        {isMintingActive ? 'Close Mint Gate' : 'Open Mint Gate'}
-                      </button>
-                    </div>
+              <div className="divider-h" style={{ margin: '1.5rem 0' }}></div>
+
+              {/* Profile Details Card */}
+              <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem' }}>
+                <h4 style={{ margin: '0 0 1rem 0', color: '#fff', fontSize: '0.95rem', fontWeight: 700 }}>Account Information</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Email Address</label>
+                    <span style={{ fontSize: '0.9rem', color: '#fff', fontWeight: 600 }}>{adminEmail}</span>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Access Role</label>
+                    <span style={{ fontSize: '0.75rem', background: 'rgba(0, 255, 136, 0.1)', color: '#00ff88', padding: '0.25rem 0.6rem', borderRadius: '4px', fontWeight: 700, display: 'inline-block' }}>ADMINISTRATOR</span>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Account Status</label>
+                    <span style={{ fontSize: '0.75rem', background: 'rgba(187, 255, 0, 0.1)', color: '#bbff00', padding: '0.25rem 0.6rem', borderRadius: '4px', fontWeight: 700, display: 'inline-block' }}>ACTIVE</span>
                   </div>
                 </div>
+              </div>
 
-                <div className="divider-h"></div>
+              <div className="divider-h" style={{ margin: '1.5rem 0' }}></div>
 
-                <div className="parameters-form">
-                  <h4>Liquidity Pool Parameters</h4>
-                  
-                  <div className="form-grid">
-                    <div className="form-group-flat">
-                      <label>Slippage Tolerance Threshold</label>
-                      <p className="field-desc">Tolerance allowed before a transaction reverts.</p>
-                      <div className="flat-input-row">
-                        {['0.1%', '0.5%', '1.0%', 'Custom'].map((val) => (
-                          <button 
-                            key={val} 
-                            onClick={() => setSlippageTolerance(val)}
-                            className={`flat-tab-btn ${slippageTolerance === val ? 'active' : ''}`}
+              {/* MFA Settings Section */}
+              <div className="cms-section-form">
+                <h4 style={{ marginBottom: '1rem', color: 'var(--primary)', textTransform: 'uppercase', fontSize: '0.9rem', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Shield size={16} />
+                  <span>Google Authenticator Multi-Factor Authentication (MFA)</span>
+                </h4>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', lineHeight: '1.6', marginBottom: '1.5rem' }}>
+                  Two-factor authentication (MFA) security adds an extra layer of protection to your account. Once enabled, you will be prompted to enter a 6-digit verification code from Google Authenticator every time you log in to the admin panel.
+                </p>
+
+                {!isSupabaseConfigured ? (
+                  <div className="alert-box error" style={{ background: 'rgba(255, 77, 77, 0.05)', border: '1px solid rgba(255, 77, 77, 0.15)', color: '#ff4d4d', padding: '1rem', borderRadius: '8px', fontSize: '0.8rem' }}>
+                    Multi-Factor Authentication requires an active connection to the Supabase database. MFA features are disabled in mock database mode.
+                  </div>
+                ) : loadingMfa ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    <span className="spinner-white" style={{ width: '16px', height: '16px' }}></span>
+                    <span>Checking MFA status...</span>
+                  </div>
+                ) : mfaActive ? (
+                  mfaStep === 'disable' ? (
+                    <div style={{ background: 'rgba(255, 77, 77, 0.02)', border: '1px solid rgba(255, 77, 77, 0.15)', borderRadius: '12px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#ff4d4d', fontWeight: 700, fontSize: '0.9rem' }}>
+                        <Shield size={20} />
+                        <span>Confirm Disabling MFA</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.5' }}>
+                        Please enter the 6-digit verification code from your authenticator app to confirm you want to disable Multi-Factor Authentication.
+                      </p>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '280px' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>6-Digit Code</label>
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                          <input
+                            type="text"
+                            maxLength={6}
+                            placeholder="e.g. 123456"
+                            value={mfaVerifyCode}
+                            onChange={(e) => setMfaVerifyCode(e.target.value.replace(/\D/g, ''))}
+                            className="flat-input font-mono"
+                            style={{ width: '120px', letterSpacing: '0.2em', textAlign: 'center' }}
+                          />
+                          <button
+                            onClick={handleVerifyDisableMfa}
+                            className="flat-save-btn"
+                            disabled={mfaVerifyCode.length !== 6}
+                            style={{ flex: 1, padding: '0.5rem 1rem', background: '#ff4d4d', color: '#fff', border: '1px solid rgba(255, 77, 77, 0.2)' }}
                           >
-                            {val}
+                            Disable MFA
                           </button>
-                        ))}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="form-group-flat">
-                      <label>Supra Gas Limit Cap</label>
-                      <p className="field-desc">Maximum execution unit units gas limit cap.</p>
-                      <div className="input-with-suffix">
-                        <input 
-                          type="text" 
-                          value={contractGasLimit} 
-                          onChange={(e) => setContractGasLimit(e.target.value)}
-                          className="flat-input"
-                        />
-                        <span className="suffix">units</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 4. NFT WHITELIST PANEL */}
-        {currentTab === 'whitelist' && (
-          <div className="tab-content fade-in">
-            <div className="glass-card single-panel development-mode-container">
-              <div className="development-overlay">
-                <div className="development-badge">
-                  <AlertTriangle size={18} />
-                  <span>Under Development</span>
-                </div>
-                <p className="development-text">
-                  This section is currently in development mode. NFT Whitelist features will be available in the next release.
-                </p>
-              </div>
-              <div className="development-content-blurred">
-                <div className="panel-header">
-                  <Layers size={20} className="panel-icon" />
-                  <h3>Genesis NFT Whitelist Manager</h3>
-                </div>
-                <p className="panel-desc">Manage wallet address mint access parameters for the upcoming Gloopo Gen 1 NFT launch.</p>
-
-                <form onSubmit={handleAddWhitelist} className="whitelist-form-box">
-                  <h4>Add New Whitelisted Wallet</h4>
-                  <div className="flat-form-row">
-                    <div className="input-field-col">
-                      <label>Supra Wallet Address</label>
-                      <input 
-                        type="text" 
-                        placeholder="sps1..." 
-                        value={newWhitelistAddress}
-                        onChange={(e) => setNewWhitelistAddress(e.target.value)}
-                        className="flat-input font-mono"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="input-field-col">
-                      <label>Member Alias / Name</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. Early Whale" 
-                        value={newWhitelistName}
-                        onChange={(e) => setNewWhitelistName(e.target.value)}
-                        className="flat-input"
-                      />
-                    </div>
-                    
-                    <div className="input-field-col">
-                      <label>Privilege Tier</label>
-                      <select 
-                        value={newWhitelistTier} 
-                        onChange={(e) => setNewWhitelistTier(e.target.value)}
-                        className="flat-select"
+                      <div className="divider-h" style={{ margin: '0.5rem 0' }}></div>
+                      <button
+                        onClick={() => setMfaStep('none')}
+                        style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline', alignSelf: 'flex-start', padding: 0 }}
                       >
-                        <option value="Vanguard">Vanguard</option>
-                        <option value="Partner">Partner</option>
-                        <option value="Alpha Tester">Alpha Tester</option>
-                      </select>
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ background: 'rgba(0, 255, 136, 0.02)', border: '1px solid rgba(0, 255, 136, 0.15)', borderRadius: '12px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#00ff88', fontWeight: 700, fontSize: '0.9rem' }}>
+                        <Shield size={20} />
+                        <span>Google Authenticator MFA is ACTIVE</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.5' }}>
+                        Your account is protected by two-factor authentication. Click the button below if you wish to disable it (Warning: this will lower your account security).
+                      </p>
+                      <button
+                        onClick={handleDisableMfa}
+                        className="flat-save-btn"
+                        style={{ background: 'rgba(255, 77, 77, 0.12)', border: '1px solid rgba(255, 77, 77, 0.35)', color: '#ff4d4d', alignSelf: 'flex-start', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}
+                      >
+                        Disable MFA
+                      </button>
+                    </div>
+                  )
+                ) : mfaStep === 'enroll' ? (
+                  <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div>
+                      <h5 style={{ margin: '0 0 0.5rem 0', color: '#fff', fontSize: '0.9rem', fontWeight: 700 }}>1. Scan QR Code</h5>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                        Scan this QR code using Google Authenticator, Authy, or another TOTP authenticator app.
+                      </p>
+                      {mfaQrCode ? (
+                        <div style={{ background: '#fff', padding: '1rem', display: 'inline-block', borderRadius: '12px', marginTop: '1rem', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
+                          <img src={mfaQrCode} alt="MFA QR Code" style={{ width: '160px', height: '160px', display: 'block' }} />
+                        </div>
+                      ) : (
+                        <span className="spinner-white" style={{ marginTop: '1rem' }}></span>
+                      )}
                     </div>
 
-                    <button type="submit" className="flat-add-btn">
-                      <Plus size={16} />
-                      <span>Add to Whitelist</span>
+                    <div>
+                      <h5 style={{ margin: '0 0 0.5rem 0', color: '#fff', fontSize: '0.9rem', fontWeight: 700 }}>2. Enter Secret Key (Alternative)</h5>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                        If you cannot scan the QR code, enter this secret key manually in your authenticator app:
+                      </p>
+                      <code style={{ display: 'inline-block', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', padding: '0.4rem 0.8rem', borderRadius: '6px', fontSize: '0.85rem', color: 'var(--primary)', fontFamily: 'monospace', marginTop: '0.5rem', letterSpacing: '0.05em' }}>
+                        {mfaSecret}
+                      </code>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '280px' }}>
+                      <h5 style={{ margin: '0 0 0.25rem 0', color: '#fff', fontSize: '0.9rem', fontWeight: 700 }}>3. Verify Security Code</h5>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>6-Digit Code</label>
+                      <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <input
+                          type="text"
+                          maxLength={6}
+                          placeholder="e.g. 123456"
+                          value={mfaVerifyCode}
+                          onChange={(e) => setMfaVerifyCode(e.target.value.replace(/\D/g, ''))}
+                          className="flat-input font-mono"
+                          style={{ width: '120px', letterSpacing: '0.2em', textAlign: 'center' }}
+                        />
+                        <button
+                          onClick={handleVerifyMfa}
+                          className="flat-save-btn btn-primary"
+                          disabled={mfaVerifyCode.length !== 6}
+                          style={{ flex: 1, padding: '0.5rem 1rem' }}
+                        >
+                          Verify &amp; Enable
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="divider-h" style={{ margin: '0.5rem 0' }}></div>
+                    <button
+                      onClick={() => setMfaStep('none')}
+                      style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline', alignSelf: 'flex-start', padding: 0 }}
+                    >
+                      Cancel Setup
                     </button>
                   </div>
-                </form>
-
-                <div className="divider-h"></div>
-
-                <div className="whitelist-list-section">
-                  <div className="section-header-row">
-                    <h4>Whitelisted Addresses ({whitelist.length})</h4>
-                    <span className="subtitle-count">Active in Smart Contract</span>
+                ) : (
+                  <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '12px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.9rem' }}>
+                      <Lock size={20} />
+                      <span>Google Authenticator MFA is DISABLED</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', lineHeight: '1.5' }}>
+                      Enabling MFA prevents unauthorized access to your admin panel by requiring a security token from your authenticator app in addition to your email and password.
+                    </p>
+                    <button
+                      onClick={handleEnableMfa}
+                      className="flat-save-btn btn-primary"
+                      style={{ alignSelf: 'flex-start', padding: '0.5rem 1.25rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}
+                    >
+                      Enable Google MFA
+                    </button>
                   </div>
-
-                  <div className="whitelist-table-wrapper">
-                    <table className="admin-table whitelist-table">
-                      <thead>
-                        <tr>
-                          <th>Address</th>
-                          <th>Alias / Owner</th>
-                          <th>Tier</th>
-                          <th>Added On</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {whitelist.map((w, index) => (
-                          <tr key={index}>
-                            <td className="wallet-addr full-width-addr">{w.address}</td>
-                            <td>{w.name}</td>
-                            <td>
-                              <span className={`tier-tag ${w.tier.toLowerCase().replace(' ', '-')}`}>
-                                {w.tier}
-                              </span>
-                            </td>
-                            <td className="text-muted-col">{w.addedAt}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                )}
               </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* 5. ADMIN ACTIVITY LOGS PANEL */}
+        {currentTab === 'logs' && (
+          <div className="tab-content fade-in">
+            <div className="glass-card single-panel">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <div>
+                  <div className="panel-header" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                    <Activity size={20} className="panel-icon" style={{ color: 'var(--primary)' }} />
+                    <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Admin Activity Logs</h3>
+                  </div>
+                  <p className="panel-desc" style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Real-time auditing of control panel configuration actions.
+                  </p>
+                </div>
+                {logs.length > 0 && (
+                  <button 
+                    onClick={handleClearLogs} 
+                    className="flat-action-btn delete-btn"
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.5rem', 
+                      background: 'rgba(255, 77, 77, 0.15)', 
+                      border: '1px solid rgba(255, 77, 77, 0.3)', 
+                      color: '#ff4d4d', 
+                      padding: '0.5rem 1rem', 
+                      borderRadius: '8px', 
+                      cursor: 'pointer', 
+                      fontSize: '0.8rem', 
+                      fontWeight: 600, 
+                      transition: 'all 0.3s ease' 
+                    }}
+                  >
+                    <Trash2 size={14} />
+                    <span>Clear All Logs</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="divider-h" style={{ margin: '0 0 1.5rem 0' }}></div>
+
+              {loadingLogs ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem 0' }}>
+                  <span className="spinner"></span>
+                </div>
+              ) : logs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+                  <Activity size={32} style={{ color: 'rgba(255,255,255,0.2)', marginBottom: '1rem' }} />
+                  <h4 style={{ margin: 0, fontSize: '1rem', color: '#fff', fontWeight: 700 }}>No Logs Recorded Yet</h4>
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                    Actions performed by administrators in the control panel will appear here in real-time.
+                  </p>
+                </div>
+              ) : (
+                (() => {
+                  const totalPages = Math.ceil(logs.length / LOGS_PER_PAGE);
+                  const safePage = Math.min(logsPage, totalPages);
+                  const startIdx = (safePage - 1) * LOGS_PER_PAGE;
+                  const pageLogs = logs.slice(startIdx, startIdx + LOGS_PER_PAGE);
+
+                  return (
+                    <div>
+                      {/* Table */}
+                      <div className="whitelist-table-wrapper" style={{ overflowX: 'auto' }}>
+                        <table className="admin-table whitelist-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
+                          <thead>
+                            <tr style={{ color: 'rgba(255, 255, 255, 0.5)', fontWeight: 600 }}>
+                              <th style={{ padding: '0.75rem 1rem' }}>Timestamp</th>
+                              <th style={{ padding: '0.75rem 1rem' }}>Administrator</th>
+                              <th style={{ padding: '0.75rem 1rem' }}>Action</th>
+                              <th style={{ padding: '0.75rem 1rem' }}>Details</th>
+                              <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {pageLogs.map((log) => {
+                              let actionColor = 'rgba(0, 255, 136, 0.1)';
+                              let actionTextColor = '#00ff88';
+                              if (log.action.includes('delete')) {
+                                actionColor = 'rgba(255, 77, 77, 0.1)';
+                                actionTextColor = '#ff4d4d';
+                              } else if (log.action.includes('add') || log.action.includes('upload')) {
+                                actionColor = 'rgba(187, 255, 0, 0.1)';
+                                actionTextColor = '#bbff00';
+                              }
+
+                              return (
+                                <tr key={log.id} style={{ transition: 'background 0.2s ease' }} className="log-row">
+                                  <td style={{ padding: '1rem', color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace' }}>
+                                    {new Date(log.created_at || log.timestamp).toLocaleString('en-US', {
+                                      hour12: false,
+                                      month: 'short',
+                                      day: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      second: '2-digit'
+                                    })}
+                                  </td>
+                                  <td style={{ padding: '1rem', fontWeight: 600, color: '#fff' }}>
+                                    {log.admin_email}
+                                  </td>
+                                  <td style={{ padding: '1rem' }}>
+                                    <span style={{ 
+                                      background: actionColor, 
+                                      color: actionTextColor, 
+                                      border: `1px solid ${actionTextColor}25`,
+                                      padding: '0.25rem 0.6rem', 
+                                      borderRadius: '6px', 
+                                      fontSize: '0.7rem', 
+                                      fontWeight: 700,
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '0.05em'
+                                    }}>
+                                      {log.action}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '1rem', color: 'rgba(255,255,255,0.8)' }}>
+                                    {log.details}
+                                  </td>
+                                  <td style={{ padding: '1rem', textAlign: 'right' }}>
+                                    <button 
+                                      onClick={() => handleDeleteSingleLog(log.id)}
+                                      className="log-delete-btn"
+                                      style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', transition: 'color 0.2s ease', padding: '0.25rem' }}
+                                      title="Delete log entry"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Pagination Controls */}
+                      {totalPages > 1 && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginTop: '1.25rem',
+                          padding: '0.75rem 1rem',
+                          background: 'rgba(0,0,0,0.25)',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          borderRadius: '10px'
+                        }}>
+                          {/* Left: log count info */}
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                            Showing {startIdx + 1}–{Math.min(startIdx + LOGS_PER_PAGE, logs.length)} of {logs.length} entries
+                          </span>
+
+                          {/* Center: chevron navigation */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <button
+                              onClick={() => setLogsPage(p => Math.max(1, p - 1))}
+                              disabled={safePage === 1}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '8px',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                background: safePage === 1 ? 'transparent' : 'rgba(0,255,136,0.06)',
+                                color: safePage === 1 ? 'rgba(255,255,255,0.2)' : 'var(--primary)',
+                                cursor: safePage === 1 ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.2s ease'
+                              }}
+                            >
+                              <ChevronLeft size={16} />
+                            </button>
+
+                            <span style={{
+                              fontSize: '0.82rem',
+                              fontWeight: 700,
+                              color: '#fff',
+                              background: 'rgba(0,255,136,0.08)',
+                              border: '1px solid rgba(0,255,136,0.2)',
+                              borderRadius: '8px',
+                              padding: '0.3rem 0.85rem',
+                              minWidth: '60px',
+                              textAlign: 'center',
+                              fontFamily: 'monospace',
+                              letterSpacing: '0.05em'
+                            }}>
+                              {safePage}/{totalPages}
+                            </span>
+
+                            <button
+                              onClick={() => setLogsPage(p => Math.min(totalPages, p + 1))}
+                              disabled={safePage === totalPages}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '8px',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                background: safePage === totalPages ? 'transparent' : 'rgba(0,255,136,0.06)',
+                                color: safePage === totalPages ? 'rgba(255,255,255,0.2)' : 'var(--primary)',
+                                cursor: safePage === totalPages ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.2s ease'
+                              }}
+                            >
+                              <ChevronRight size={16} />
+                            </button>
+                          </div>
+
+                          {/* Right: jump-to-page dots */}
+                          <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(pg => (
+                              <button
+                                key={pg}
+                                onClick={() => setLogsPage(pg)}
+                                style={{
+                                  width: '8px',
+                                  height: '8px',
+                                  borderRadius: '50%',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
+                                  background: pg === safePage
+                                    ? 'var(--primary)'
+                                    : 'rgba(255,255,255,0.15)',
+                                  transform: pg === safePage ? 'scale(1.4)' : 'scale(1)'
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              )}
             </div>
           </div>
         )}
@@ -3630,16 +4488,35 @@ const AdminDashboardPage = () => {
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           text-align: left;
           position: relative;
+          overflow: hidden;
+        }
+
+        .nav-item::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 0;
+          height: 100%;
+          width: 3px;
+          background: var(--primary);
+          transform: scaleY(0);
+          transition: transform 0.2s ease;
+          transform-origin: bottom;
+        }
+
+        .nav-item.active::before {
+          transform: scaleY(1);
+          transform-origin: top;
         }
 
         .nav-item:hover {
           color: #fff;
-          background: rgba(255, 255, 255, 0.03);
+          background: rgba(255, 255, 255, 0.02);
         }
 
         .nav-item.active {
           background: rgba(0, 255, 136, 0.05);
-          border: 1px solid rgba(0, 255, 136, 0.15);
+          border: 1px solid rgba(0, 255, 136, 0.12);
           color: var(--primary);
         }
 
@@ -3878,7 +4755,7 @@ const AdminDashboardPage = () => {
         .metrics-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 1.25rem;
+          gap: 1.5rem;
         }
 
         .metric-box {
@@ -3887,11 +4764,36 @@ const AdminDashboardPage = () => {
           gap: 1.25rem;
           padding: 1.4rem 1.6rem;
           background: rgba(4, 12, 10, 0.5);
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .metric-box:hover {
+        .metric-box.blue-theme { border-color: rgba(59, 130, 246, 0.18); }
+        .metric-box.green-theme { border-color: rgba(0, 255, 136, 0.18); }
+        .metric-box.purple-theme { border-color: rgba(168, 85, 247, 0.18); }
+        .metric-box.neon-theme { border-color: rgba(187, 255, 0, 0.18); }
+
+        .metric-box.blue-theme:hover {
           transform: translateY(-3px);
-          border-color: rgba(0, 255, 136, 0.25);
+          border-color: rgba(59, 130, 246, 0.5);
+          box-shadow: 0 12px 30px rgba(59, 130, 246, 0.15);
+        }
+
+        .metric-box.green-theme:hover {
+          transform: translateY(-3px);
+          border-color: rgba(0, 255, 136, 0.5);
+          box-shadow: 0 12px 30px rgba(0, 255, 136, 0.15);
+        }
+
+        .metric-box.purple-theme:hover {
+          transform: translateY(-3px);
+          border-color: rgba(168, 85, 247, 0.5);
+          box-shadow: 0 12px 30px rgba(168, 85, 247, 0.15);
+        }
+
+        .metric-box.neon-theme:hover {
+          transform: translateY(-3px);
+          border-color: rgba(187, 255, 0, 0.5);
+          box-shadow: 0 12px 30px rgba(187, 255, 0, 0.15);
         }
 
         .metric-icon {
@@ -3942,7 +4844,7 @@ const AdminDashboardPage = () => {
         .dashboard-bento {
           display: grid;
           grid-template-columns: repeat(12, 1fr);
-          gap: 1.25rem;
+          gap: 1.5rem;
         }
 
         .bento-panel {
@@ -3956,8 +4858,21 @@ const AdminDashboardPage = () => {
           border-color: var(--glass-border);
         }
 
-        .controls-quick { grid-column: span 5; }
-        .transaction-panel-quick { grid-column: span 7; }
+        .traffic-panel-quick { grid-column: span 12; }
+
+        .traffic-analytics-content {
+          display: grid;
+          grid-template-columns: 1.2fr 0.8fr;
+          gap: 2rem;
+          align-items: start;
+        }
+
+        @media (max-width: 768px) {
+          .traffic-analytics-content {
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+          }
+        }
 
         .panel-header-row {
           display: flex;
@@ -4190,7 +5105,16 @@ const AdminDashboardPage = () => {
           font-size: 0.85rem;
           margin-top: 1rem;
           border: none;
-          transition: all 0.3s;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .flat-save-btn:not(:disabled):hover {
+          transform: scale(1.02) translateY(-2px);
+          box-shadow: 0 5px 15px rgba(0, 255, 136, 0.2);
+        }
+
+        .flat-save-btn:not(:disabled):active {
+          transform: scale(0.98) translateY(0);
         }
 
         .flat-save-btn:disabled {
@@ -4863,25 +5787,39 @@ const AdminDashboardPage = () => {
         }
 
         .flat-input, .flat-select {
-          background: rgba(0,0,0,0.3);
+          background: rgba(0, 0, 0, 0.4);
           border: 1px solid var(--glass-border);
           border-radius: var(--radius-md);
-          padding: 0.8rem 1rem;
+          padding: 0.8rem 1.1rem;
           color: #fff;
           font-size: 0.85rem;
           font-family: inherit;
           font-weight: 600;
           outline: none;
           width: 100%;
-          transition: border-color 0.2s;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .flat-input:focus, .flat-select:focus {
-          border-color: var(--primary);
+          border-color: rgba(0, 255, 136, 0.4);
+          box-shadow: 0 0 12px rgba(0, 255, 136, 0.15);
+          background: rgba(0, 0, 0, 0.5);
+        }
+
+        .flat-select {
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2300ff88' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 1.1rem center;
+          background-size: 1rem;
+          padding-right: 2.8rem;
+          cursor: pointer;
         }
 
         .flat-select option {
-          background: #030806;
+          background: #040c0a;
           color: #fff;
         }
 
@@ -5105,9 +6043,17 @@ const AdminDashboardPage = () => {
           border-bottom: 1px solid rgba(255,255,255,0.015);
         }
 
+        .admin-table tbody tr {
+          transition: all 0.2s ease;
+        }
+
+        .admin-table tbody tr:hover {
+          background: rgba(0, 255, 136, 0.015);
+        }
+
         .admin-table tbody tr:hover td {
-          background: rgba(255, 255, 255, 0.008);
           color: #fff;
+          border-bottom-color: rgba(0, 255, 136, 0.08);
         }
 
         .wallet-addr {
@@ -5189,6 +6135,12 @@ const AdminDashboardPage = () => {
           to { transform: rotate(360deg); }
         }
 
+        .tab-content {
+          display: flex;
+          flex-direction: column;
+          gap: 2.25rem;
+        }
+
         .fade-in {
           animation: fadeIn 0.4s ease forwards;
         }
@@ -5250,7 +6202,7 @@ const AdminDashboardPage = () => {
             padding: 1.5rem;
           }
 
-          .controls-quick, .transaction-panel-quick {
+          .traffic-panel-quick {
             grid-column: span 12;
           }
         }

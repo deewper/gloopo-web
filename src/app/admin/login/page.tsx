@@ -15,6 +15,11 @@ const AdminLoginPage = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  // MFA States
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaFactorId, setMfaFactorId] = useState('');
+
   // If already logged in, redirect to admin dashboard
   useEffect(() => {
     const checkUser = async () => {
@@ -57,6 +62,46 @@ const AdminLoginPage = () => {
           throw new Error(authError.message);
         }
 
+        if (!data.user) {
+          throw new Error('Authentication failed. No user returned.');
+        }
+
+        // Verify active admin profile first to check role, status, and if MFA is enabled
+        const { data: profile, error: profileError } = await supabase
+          .from('admin_profiles')
+          .select('role, status, mfa_enabled')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError || !profile || profile.role !== 'admin' || profile.status !== 'active') {
+          await supabase.auth.signOut();
+          throw new Error('Unauthorized. You do not have administrator privileges.');
+        }
+
+        // Check if MFA is required and enabled for this profile
+        if (profile.mfa_enabled) {
+          const { data: mfaData, error: mfaError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+          if (mfaError) {
+            throw new Error(mfaError.message);
+          }
+
+          if (mfaData && mfaData.nextLevel === 'aal2' && mfaData.currentLevel !== 'aal2') {
+            // List factors to get verified TOTP factor
+            const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
+            if (factorsError) {
+              throw new Error(factorsError.message);
+            }
+
+            const activeTotp = factorsData?.all?.find(f => f.status === 'verified' && f.factor_type === 'totp');
+            if (activeTotp) {
+              setMfaFactorId(activeTotp.id);
+              setMfaRequired(true);
+              setLoading(false);
+              return;
+            }
+          }
+        }
+
         setSuccess('Authentication successful! Redirecting...');
         setTimeout(() => {
           router.push('/admin');
@@ -88,6 +133,72 @@ const AdminLoginPage = () => {
     }
   };
 
+  const handleMfaVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    if (!mfaCode) {
+      setError('Please enter the verification code.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      if (isSupabaseConfigured && supabase && mfaFactorId) {
+        // Step 1: Challenge the factor
+        const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+          factorId: mfaFactorId
+        });
+        if (challengeError) throw challengeError;
+
+        // Step 2: Verify code
+        const { error: verifyError } = await supabase.auth.mfa.verify({
+          factorId: mfaFactorId,
+          challengeId: challengeData.id,
+          code: mfaCode
+        });
+        if (verifyError) throw verifyError;
+
+        // Step 3: Verify active admin profile
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not found.');
+
+        const { data: profile, error: profileError } = await supabase
+          .from('admin_profiles')
+          .select('role, status')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError || !profile || profile.role !== 'admin' || profile.status !== 'active') {
+          await supabase.auth.signOut();
+          throw new Error('Access denied. You do not have administrator privileges.');
+        }
+
+        setSuccess('MFA verification successful! Redirecting...');
+        setTimeout(() => {
+          router.push('/admin');
+        }, 1200);
+      }
+    } catch (err: any) {
+      setError(err.message || 'MFA verification failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBackToLogin = async () => {
+    setError(null);
+    setSuccess(null);
+    setMfaRequired(false);
+    setMfaCode('');
+    setMfaFactorId('');
+    if (isSupabaseConfigured && supabase) {
+      await supabase.auth.signOut();
+    }
+  };
+
   return (
     <div className="admin-login-container">
       <div className="bg-decorations">
@@ -98,82 +209,140 @@ const AdminLoginPage = () => {
       <div className="login-card-wrapper">
 
         <div className="glass-card login-card">
-          <div className="card-header">
-            <div className="shield-icon">
-              <Shield size={32} />
-            </div>
-            <h1>Admin Control Portal</h1>
-            <p>Authorized personnel only. Please verify your credentials.</p>
-          </div>
-
-          {!isSupabaseConfigured && (
-            <div className="mock-badge-card">
-              <div className="mock-badge-header">
-                <AlertTriangle size={16} className="warning-icon" />
-                <span>Mock Auth Active</span>
+          {mfaRequired ? (
+            <>
+              <div className="card-header">
+                <div className="shield-icon" style={{ borderColor: 'rgba(187, 255, 0, 0.4)', color: 'var(--accent)' }}>
+                  <Shield size={32} />
+                </div>
+                <h1>Two-Factor Verification</h1>
+                <p>Enter the 6-digit security code from your Google Authenticator app to proceed.</p>
               </div>
-              <p>
-                Supabase credentials not configured in <code>.env.local</code>. <br />
-                Login using: <code className="highlight">admin@gloopo.com</code> &amp; <code className="highlight">admin123</code>
-              </p>
-            </div>
-          )}
 
-          <form onSubmit={handleLogin} className="login-form">
-            {error && <div className="alert-box error">{error}</div>}
-            {success && <div className="alert-box success">{success}</div>}
+              <form onSubmit={handleMfaVerify} className="login-form">
+                {error && <div className="alert-box error">{error}</div>}
+                {success && <div className="alert-box success">{success}</div>}
 
-            <div className="input-group">
-              <label htmlFor="email">Email Address</label>
-              <div className="input-wrapper">
-                <span className="input-icon-box">
-                  <Mail size={17} />
-                </span>
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="admin@gloopo.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
+                <div className="input-group">
+                  <label htmlFor="mfaCode">Google MFA Code</label>
+                  <div className="input-wrapper">
+                    <span className="input-icon-box">
+                      <Shield size={17} style={{ color: 'var(--accent)' }} />
+                    </span>
+                    <input
+                      id="mfaCode"
+                      type="text"
+                      pattern="[0-9]*"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={mfaCode}
+                      onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                      disabled={loading}
+                      autoComplete="one-time-code"
+                      style={{ letterSpacing: mfaCode ? '0.3em' : 'normal', textAlign: mfaCode ? 'center' : 'left' }}
+                    />
+                  </div>
+                </div>
 
-            <div className="input-group">
-              <label htmlFor="password">Security Password</label>
-              <div className="input-wrapper">
-                <span className="input-icon-box">
-                  <Key size={17} />
-                </span>
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                />
+                <button type="submit" className="btn-primary login-btn" disabled={loading} style={{ background: 'var(--accent)', color: '#030806' }}>
+                  {loading ? (
+                    <span className="spinner" style={{ borderTopColor: '#000' }}></span>
+                  ) : (
+                    <span>Verify &amp; Continue</span>
+                  )}
+                </button>
+
                 <button
                   type="button"
-                  className="pw-toggle"
-                  onClick={() => setShowPassword(v => !v)}
-                  tabIndex={-1}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="back-btn"
+                  onClick={handleBackToLogin}
+                  disabled={loading}
                 >
-                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  Back to Login
                 </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <div className="card-header">
+                <div className="shield-icon">
+                  <Shield size={32} />
+                </div>
+                <h1>Admin Control Portal</h1>
+                <p>Authorized personnel only. Please verify your credentials.</p>
               </div>
-            </div>
 
-            <button type="submit" className="btn-primary login-btn" disabled={loading}>
-              {loading ? (
-                <span className="spinner"></span>
-              ) : (
-                <span>Access Dashboard</span>
+              {!isSupabaseConfigured && (
+                <div className="mock-badge-card">
+                  <div className="mock-badge-header">
+                    <AlertTriangle size={16} className="warning-icon" />
+                    <span>Mock Auth Active</span>
+                  </div>
+                  <p>
+                    Supabase credentials not configured in <code>.env.local</code>. <br />
+                    Login using: <code className="highlight">admin@gloopo.com</code> &amp; <code className="highlight">admin123</code>
+                  </p>
+                </div>
               )}
-            </button>
-          </form>
+
+              <form onSubmit={handleLogin} className="login-form">
+                {error && <div className="alert-box error">{error}</div>}
+                {success && <div className="alert-box success">{success}</div>}
+
+                <div className="input-group">
+                  <label htmlFor="email">Email Address</label>
+                  <div className="input-wrapper">
+                    <span className="input-icon-box">
+                      <Mail size={17} />
+                    </span>
+                    <input
+                      id="email"
+                      type="email"
+                      placeholder="admin@gloopo.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <div className="input-group">
+                  <label htmlFor="password">Security Password</label>
+                  <div className="input-wrapper">
+                    <span className="input-icon-box">
+                      <Key size={17} />
+                    </span>
+                    <input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={loading}
+                    />
+                    <button
+                      type="button"
+                      className="pw-toggle"
+                      onClick={() => setShowPassword(v => !v)}
+                      tabIndex={-1}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
+                  </div>
+                </div>
+
+                <button type="submit" className="btn-primary login-btn" disabled={loading}>
+                  {loading ? (
+                    <span className="spinner"></span>
+                  ) : (
+                    <span>Access Dashboard</span>
+                  )}
+                </button>
+              </form>
+            </>
+          )}
         </div>
       </div>
 
@@ -440,6 +609,26 @@ const AdminLoginPage = () => {
           align-items: center;
           justify-content: center;
           margin-top: 1rem;
+        }
+
+        .back-btn {
+          width: 100%;
+          background: none;
+          border: none;
+          color: var(--text-muted);
+          font-size: 0.8rem;
+          cursor: pointer;
+          text-align: center;
+          margin-top: 1rem;
+          text-transform: uppercase;
+          font-weight: 700;
+          letter-spacing: 0.05em;
+          transition: color 0.2s ease;
+          display: block;
+        }
+
+        .back-btn:hover {
+          color: #fff;
         }
 
         .spinner {

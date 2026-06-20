@@ -295,7 +295,6 @@ export default function ShowcasePage() {
             setMaintenanceMode(data.value.maintenanceMode !== false);
             setCrystaraCreator(data.value.crystaraCreator || '');
             setCrystaraCollection(data.value.crystaraCollection || '');
-            setCrystaraApiKey(data.value.crystaraApiKey || '');
             setCrystaraNetwork(data.value.crystaraNetwork || 'mainnet');
             setOgpassCollection(data.value.ogpassCollection || '');
             setOgpassMaintenance(data.value.ogpassMaintenance !== false);
@@ -312,12 +311,12 @@ export default function ShowcasePage() {
           }
         } else {
           const val = localStorage.getItem('gloopo_mock_setting_nfts');
+          const keyVal = localStorage.getItem('gloopo_mock_setting_crystara_api_key');
           if (val) {
             const parsed = JSON.parse(val);
             setMaintenanceMode(parsed.maintenanceMode !== false);
             setCrystaraCreator(parsed.crystaraCreator || '');
             setCrystaraCollection(parsed.crystaraCollection || '');
-            setCrystaraApiKey(parsed.crystaraApiKey || '');
             setCrystaraNetwork(parsed.crystaraNetwork || 'mainnet');
             setOgpassCollection(parsed.ogpassCollection || '');
             setOgpassMaintenance(parsed.ogpassMaintenance !== false);
@@ -331,6 +330,10 @@ export default function ShowcasePage() {
             setGen03Collection(parsed.gen03Collection || '');
             setGen03Maintenance(parsed.gen03Maintenance !== false);
             setGen03Creator(parsed.gen03Creator || parsed.crystaraCreator || '');
+          }
+          if (keyVal) {
+            const parsedKey = JSON.parse(keyVal);
+            setCrystaraApiKey(parsedKey.apiKey || '');
           }
         }
       } catch (err) {
@@ -432,27 +435,45 @@ export default function ShowcasePage() {
       setFetchError(null);
       return;
     }
-    if (!activeCreator || !activeCollection || !crystaraApiKey) return;
+    if (!activeCreator || !activeCollection || (!isSupabaseConfigured && !crystaraApiKey)) return;
 
     let cancelled = false;
+
+    const fetchCrystaraTokensPage = async (pageNo: number) => {
+      if (isSupabaseConfigured && supabase) {
+        const { data, error } = await supabase.functions.invoke('crystara-proxy', {
+          body: {
+            creator: activeCreator,
+            collection: activeCollection,
+            page: pageNo,
+            limit: 50,
+            network: crystaraNetwork
+          }
+        });
+        if (error) {
+          throw new Error(error.message || 'Failed to invoke Supabase Edge Function');
+        }
+        return data;
+      } else {
+        const baseUrl = crystaraNetwork === 'testnet' ? 'https://api.crystara.trade/testnet' : 'https://api.crystara.trade/mainnet';
+        const url = `${baseUrl}/tokens-by-collection?creator=${encodeURIComponent(activeCreator)}&collection=${encodeURIComponent(activeCollection)}&page=${pageNo}&limit=50`;
+        const res = await fetch(url, {
+          headers: { 'x-api-key': crystaraApiKey }
+        });
+        if (!res.ok) {
+          throw new Error(`API returned error: ${res.status} ${res.statusText}`);
+        }
+        return await res.json();
+      }
+    };
 
     const fetchAllCrystaraTokens = async () => {
       setLoadingTokens(true);
       setFetchError(null);
       try {
-        const baseUrl = crystaraNetwork === 'testnet' ? 'https://api.crystara.trade/testnet' : 'https://api.crystara.trade/mainnet';
-        
         // 1. Fetch page 1 first to read total items/supply
-        const page1Url = `${baseUrl}/tokens-by-collection?creator=${encodeURIComponent(activeCreator)}&collection=${encodeURIComponent(activeCollection)}&page=1&limit=50`;
-        const res1 = await fetch(page1Url, {
-          headers: { 'x-api-key': crystaraApiKey }
-        });
+        const json1 = await fetchCrystaraTokensPage(1);
 
-        if (!res1.ok) {
-          throw new Error(`API returned error: ${res1.status} ${res1.statusText}`);
-        }
-
-        const json1 = await res1.json();
         let page1Tokens = [];
         if (json1.success && Array.isArray(json1.data)) {
           page1Tokens = json1.data;
@@ -487,12 +508,8 @@ export default function ShowcasePage() {
         if (totalP > 1) {
           const pagePromises = Array.from({ length: totalP - 1 }, (_, idx) => idx + 2).map(async (pageNo) => {
             try {
-              const url = `${baseUrl}/tokens-by-collection?creator=${encodeURIComponent(activeCreator)}&collection=${encodeURIComponent(activeCollection)}&page=${pageNo}&limit=50`;
-              const res = await fetch(url, { headers: { 'x-api-key': crystaraApiKey } });
-              if (res.ok) {
-                const data = await res.json();
-                return data.tokens || data.data?.tokens || data.data || [];
-              }
+              const data = await fetchCrystaraTokensPage(pageNo);
+              return data.tokens || data.data?.tokens || data.data || [];
             } catch (err) {
               console.error(`Failed to fetch page ${pageNo}:`, err);
             }
@@ -602,13 +619,13 @@ export default function ShowcasePage() {
     return () => {
       cancelled = true;
     };
-  }, [loading, activeMaintenance, activeCreator, activeCollection, crystaraApiKey, crystaraNetwork]);
+  }, [loading, activeMaintenance, activeCreator, activeCollection, crystaraApiKey, crystaraNetwork, isSupabaseConfigured]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [activeCreator, activeCollection, crystaraNetwork]);
 
-  const isConfigured = Boolean(activeCreator && activeCollection && crystaraApiKey);
+  const isConfigured = Boolean(activeCreator && activeCollection && (isSupabaseConfigured || crystaraApiKey));
 
   const normalizeToken = (t: any) => {
     // Deduce numerical ID from tokenName (e.g., "TOKEN_600" -> "600")
