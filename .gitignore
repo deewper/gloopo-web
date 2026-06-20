@@ -46,6 +46,9 @@ next-env.d.ts
 # migration
 /migration
 
+# supabase
+/supabase
+
 # archives
 *.zip
 
