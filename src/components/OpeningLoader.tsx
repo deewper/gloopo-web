@@ -259,38 +259,6 @@ export default function OpeningLoader({ onFinish }: { onFinish: () => void }) {
           />
         </div>
 
-        {/* Brand name text */}
-        <div style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem',
-          opacity: phase === 'in' ? 0 : 1,
-          transform: phase === 'in' ? 'translateY(16px)' : 'translateY(0)',
-          transition: 'opacity 0.5s ease 0.2s, transform 0.5s ease 0.2s',
-        }}>
-          <span style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: 'clamp(2rem, 5vw, 3.5rem)',
-            fontWeight: 800,
-            letterSpacing: '-0.04em',
-            color: '#fff',
-            textShadow: glitch
-              ? '3px 0 #BBFF00, -3px 0 #00ffaa, 0 0 20px rgba(0,255,136,0.8)'
-              : '0 0 40px rgba(0,255,136,0.4)',
-            lineHeight: 1,
-          }}>
-            GLOOPO
-          </span>
-          <span style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontSize: 'clamp(0.65rem, 1.5vw, 0.8rem)',
-            fontWeight: 700,
-            letterSpacing: '0.35em',
-            textTransform: 'uppercase',
-            color: '#00FF88',
-            opacity: 0.8,
-          }}>
-            Community · Driven · Assets
-          </span>
-        </div>
 
         {/* Progress bar */}
         <div style={{
