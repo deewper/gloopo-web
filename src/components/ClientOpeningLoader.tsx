@@ -10,19 +10,19 @@ export default function ClientOpeningLoader() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    // Show on every fresh page load / refresh (not on Next.js client-side nav)
-    // We detect a fresh load by absence of a sessionStorage flag set after first hide
-    const alreadyShown = sessionStorage.getItem('gloopo_intro_shown');
-    if (!alreadyShown) {
-      setShow(true);
+    // Skip entirely on any /admin route
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+      return;
     }
+    // Show on every hard refresh / first load — no sessionStorage guard
+    setShow(true);
   }, []);
 
   const handleFinish = useCallback(() => {
-    sessionStorage.setItem('gloopo_intro_shown', '1');
     setShow(false);
   }, []);
 
   if (!show) return null;
   return <OpeningLoader onFinish={handleFinish} />;
 }
+
